@@ -4,7 +4,7 @@
 
 # NetClaw williamscp1
 
-A CCIE-level AI network engineering coworker. Built on [OpenClaw](https://github.com/openclaw/openclaw) with Anthropic Claude, 82 skills, and 37 MCP server backends for complete network automation with ITSM gating, source-of-truth reconciliation, immutable audit trails, packet capture analysis, GitHub config-as-code, Cisco CML lab simulation, ContainerLab containerized network labs, Cisco NSO orchestration, Cisco SD-WAN vManage monitoring, Grafana observability (dashboards, Prometheus, Loki, alerting, incidents), Prometheus direct PromQL monitoring, Kubeshark Kubernetes traffic analysis, Cisco Meraki Dashboard management, Cisco ThousandEyes network intelligence, AWS cloud networking, Cisco Secure Firewall policy auditing, Itential network orchestration, Juniper JunOS device automation, Arista CloudVision Portal monitoring, F5 BIG-IP pyATS iControl REST coverage, UML diagram generation, live BGP/OSPF control-plane participation, Slack-native operations, and Microsoft 365 integration.
+A CCIE-level AI network engineering coworker. Built on [OpenClaw](https://github.com/openclaw/openclaw) with Anthropic Claude, 113 skills, and 66 MCP integrations for complete network automation with ITSM gating, source-of-truth reconciliation, immutable audit trails, gNMI streaming telemetry, Canvas/A2UI inline network visualizations, packet capture analysis, GitHub config-as-code, GitLab DevOps (issues, merge requests, pipelines, repositories, wikis), Jenkins CI/CD (job monitoring, build triggering, log analysis, SCM tracking), Cisco CML lab simulation, ContainerLab containerized network labs, Cisco NSO orchestration, Cisco SD-WAN vManage monitoring, Grafana observability (dashboards, Prometheus, Loki, alerting, incidents), Prometheus direct PromQL monitoring, Kubeshark Kubernetes traffic analysis, Cisco Meraki Dashboard management, Cisco ThousandEyes network intelligence, AWS cloud networking, Cisco Secure Firewall policy auditing, Check Point Security (15 MCPs: policy, threat intel, gateway, SASE, malware), Itential network orchestration, Juniper JunOS device automation, Arista CloudVision Portal monitoring, F5 BIG-IP pyATS iControl REST coverage, Infoblox DDI, Palo Alto Panorama, FortiManager, Batfish offline configuration analysis, UML diagram generation, EVPN/VXLAN fabric workflows, live BGP/OSPF control-plane participation, nmap network scanning, gtrace path analysis and IP enrichment, Slack-native operations, Cisco WebEx-native operations, Microsoft 365 integration, and MemPalace persistent AI memory.
 
 ---
 
@@ -16,7 +16,7 @@ cd netclaw
 ./scripts/install.sh          # installs everything, then launches the setup wizard
 ```
 
-That's it. The installer clones 37 MCP servers, deploys 82 skills, then launches a two-phase setup:
+That's it. The installer deploys 113 skills, installs bundled MCP dependencies, and prepares configuration for 66 MCP integrations, then launches a two-phase setup:
 
 **Phase 1: `openclaw onboard`** (OpenClaw's built-in wizard)
 - Pick your AI provider (Anthropic, OpenAI, Bedrock, Vertex, 30+ options)
@@ -26,19 +26,84 @@ That's it. The installer clones 37 MCP servers, deploys 82 skills, then launches
 
 **Phase 2: `./scripts/setup.sh`** (NetClaw platform credentials)
 - Network devices (testbed.yaml editor)
-- Platform credentials (NetBox, Nautobot, Infrahub, Itential, ServiceNow, ACI, ISE, F5, Catalyst Center, NVD, Microsoft Graph, GitHub, CML, NSO, Meraki, FMC, ThousandEyes, RADKit, AWS, GCP, ContainerLab, SD-WAN, Grafana, Prometheus, Kubeshark)
+- Platform credentials (NetBox, Nautobot, Infrahub, Infoblox, Itential, ServiceNow, ACI, ISE, F5, Catalyst Center, NVD, Microsoft Graph, GitHub, CML, NSO, Meraki, FMC, Panorama, FortiManager, ThousandEyes, RADKit, AWS, GCP, ContainerLab, SD-WAN, Grafana, Prometheus, Kubeshark)
 - Your identity (name, role, timezone for USER.md)
 
 After setup, start NetClaw:
 
 ```bash
 openclaw gateway              # terminal 1
-openclaw chat --new           # terminal 2
+openclaw tui                  # terminal 2
 ```
 
 Reconfigure anytime:
 - `openclaw configure` — AI provider, gateway, channels
 - `./scripts/setup.sh` — network platform credentials
+
+---
+
+## Enterprise Security (DefenseClaw + OpenShell)
+
+NetClaw includes enterprise-grade security via **Cisco DefenseClaw** and **NVIDIA OpenShell**:
+
+| Layer | Technology | Protection |
+|-------|------------|------------|
+| **Container** | NVIDIA OpenShell | Docker-based sandbox with YAML policies |
+| **Guardrails** | Cisco DefenseClaw | LLM inspection, tool call filtering |
+| **Scanning** | CodeGuard | Credential detection, injection prevention |
+| **Audit** | SQLite + SIEM | Full compliance logging |
+
+### Enable Security
+
+```bash
+# During install (recommended)
+./scripts/install.sh
+# Answer 'y' to "Enable DefenseClaw + OpenShell?"
+
+# Or enable later
+./scripts/defenseclaw-enable.sh
+```
+
+### Run NetClaw Securely
+
+```bash
+# One-command secure startup (recommended)
+./scripts/netclaw-secure-start.sh
+
+# Then connect to sandbox:
+openshell sandbox connect netclaw
+export HOME=/sandbox
+openclaw gateway run &
+openclaw tui
+```
+
+```bash
+# Or guardrails only (no container)
+defenseclaw setup guardrail --mode action
+claw
+```
+
+**[Full security guide >>>](docs/DEFENSECLAW.md)**
+
+---
+
+## Visual HUD
+
+<p align="center">
+  <img src="ui/netclaw-visual/logos/netclawvisualhud.png" alt="NetClaw Visual HUD — 3D Network Operations Dashboard" width="800">
+</p>
+
+NetClaw includes a Three.js 3D operations dashboard that visualizes all 48 integrations, 103 skills, your device fleet, and live BGP peering topology. Chat with NetClaw directly from the browser, watch integrations light up as tools execute, and inspect every node in the graph. The Canvas/A2UI visualization skill renders inline topology maps, health dashboards, alert cards, change timelines, config diffs, path traces, and health scorecards directly in the chat interface.
+
+```bash
+cd ui/netclaw-visual
+npm install
+npm run dev                   # opens at http://localhost:3000
+```
+
+Requires the OpenClaw gateway to be running for live chat (`openclaw gateway run`).
+
+**[Full setup guide, peering instructions, and feature documentation >>>](ui/netclaw-visual/README.md)**
 
 ---
 
@@ -56,7 +121,9 @@ NetClaw is an autonomous network engineering agent powered by Claude that can:
 - **Manage** ACI fabric — health audits, policy analysis, safe tenant/VRF/BD/EPG changes with fault delta rollback
 - **Investigate** endpoints via ISE — auth history, posture, profiling, human-authorized quarantine
 - **Audit** Cisco Secure Firewall policies via FMC — search access rules by IP/FQDN, resolve FTD device policies, cross-FMC consistency checks, and SGT-based policy review
+- **Operate** Infoblox DDI — inspect DNS zones and records, DHCP scopes and leases, and IPAM utilization before address-related changes
 - **Manage** Cisco Meraki infrastructure via Dashboard API (~804 endpoints) — org inventory, networks, devices, wireless SSIDs, RF profiles, switch ports, VLANs, MX firewall rules, site-to-site VPN, content filtering, security events, camera analytics, live diagnostics (ping, cable test), and configuration change audit
+- **Audit** Palo Alto Panorama and FortiManager estates — policy search, device-group/ADOM/package review, NAT validation, and commit/install readiness checks
 - **Monitor** network paths via Cisco ThousandEyes — synthetic test results, agent health, hop-by-hop path visualization (latency, loss, MPLS labels per hop), BGP route analysis (AS path, reachability, origin validation), outage investigation, anomaly detection, instant on-demand tests, endpoint VPN diagnostics, and AI-powered views explanations — via both community (9 tools, local stdio) and official (~20 tools, remote HTTP) MCP servers
 - **Access** remote devices via Cisco RADKit cloud relay — discover device inventory, inspect device attributes and capabilities, execute CLI commands with timeout/truncation controls, and perform SNMP GET operations on air-gapped or cloud-unreachable devices without direct SSH/SNMP connectivity
 - **Automate** Juniper JunOS devices via PyEZ/NETCONF — CLI command execution, configuration management, Jinja2 template rendering, device facts collection, and batch operations across router fleets
@@ -65,15 +132,20 @@ NetClaw is an autonomous network engineering agent powered by Claude that can:
 - **Observe** infrastructure via Grafana (75+ tools) — search/view/modify dashboards, query Prometheus metrics with PromQL (interface traffic, CPU, BGP state, error rates, histogram percentiles), query Loki logs with LogQL (syslog, SNMP traps, application logs), manage alerting rules and contact points, track incidents with timeline activities, view OnCall schedules and current responders, annotate dashboards, render panel images, and generate deep links
 - **Query** Prometheus directly (6 tools) — execute instant and range PromQL queries, browse available metrics with pagination, retrieve metric metadata (type, help, unit), inspect scrape target health and status, and verify Prometheus server availability. Supports basic auth, bearer tokens (Grafana Cloud, Thanos, Cortex), and multi-tenant org IDs
 - **Inspect** Kubernetes traffic with Kubeshark (6 tools) — capture L4/L7 traffic across cluster pods, export pcaps for Wireshark analysis, create point-in-time snapshots, filter with KFL expressions, list TCP/UDP flows with RTT metrics, and get top-talker summaries. Automatic TLS decryption via eBPF. Dissects HTTP, gRPC, GraphQL, Redis, Kafka, DNS
+- **Observe** network state with SuzieQ (5 tools) — query current and historical network state across 20+ tables, run BGP/OSPF/interface/EVPN assertions, get aggregated summaries, trace forwarding paths hop-by-hop, and discover value distributions. Time-travel queries for historical analysis
+- **Troubleshoot** EVPN/VXLAN fabrics — VTEP reachability, VNI mapping, EVPN route-type inspection, multihoming state, and underlay/overlay correlation
 - **Participate** in BGP and OSPF as a live routing peer — inject/withdraw routes, query RIB/LSDB, adjust LOCAL_PREF and OSPF cost, peer with real routers over GRE tunnels via native protocol speakers (RFC 4271/5340)
+- **Trace** network paths with gtrace — advanced traceroute with MPLS label detection, ECMP path discovery, and NAT detection; continuous MTR monitoring with per-hop loss and jitter; distributed GlobalPing probes from 500+ worldwide locations; ASN ownership lookup, geolocation, and reverse DNS for IP enrichment
 - **Scan** for CVE vulnerabilities against the NVD database with CVSS severity correlation and exposure confirmation
 - **Manage** F5 BIG-IP load balancers — virtual servers, pools, iRules, stats, and change management
 - **Audit** F5 BIG-IP via iControl REST API — LTM virtual servers, pools, nodes, 40+ monitor types, 60+ profile types, iRules, GTM wide IPs, system health (CPU, memory, disk), HA sync-status, certificates, analytics (HTTP, TCP, DNS, DoS), live-update signature freshness
 - **Operate** Catalyst Center — device inventory, client monitoring, site management, and troubleshooting
 - **Calculate** IPv4 and IPv6 subnets — VLSM planning, wildcard masks, allocation standards
 - **Alert** via Slack — severity-formatted notifications, incident workflows, and user-aware routing
+- **Alert** via Cisco WebEx — Adaptive Card-formatted notifications with interactive incident management buttons, threaded investigation, user-aware escalation via People API, and voice responses
 - **Diagram** your network with Draw.io topology maps (color-coded by reconciliation status)
 - **Visualize** protocol hierarchies as interactive Markmap mind maps
+- **Render** inline Canvas/A2UI visualizations in chat — topology maps with health-colored nodes, real-time dashboards (CPU, memory, BGP, OSPF), severity-sorted alert cards, ServiceNow change request timelines, config/routing/ACL diffs, hop-by-hop path traces with ECMP and black hole detection, and aggregated health scorecards with drill-down
 - **Generate** UML and infrastructure diagrams via Kroki — 27+ types including network topology (nwdiag), rack layouts (rackdiag), packet headers (packetdiag), protocol state machines, sequence diagrams, C4 architecture, Mermaid, D2, Graphviz, ERD — output as SVG, PNG, PDF
 - **Reference** IETF RFCs and Wikipedia for standards-compliant configuration
 - **Store** reports, config backups, and diagrams on SharePoint via Microsoft Graph
@@ -81,6 +153,8 @@ NetClaw is an autonomous network engineering agent powered by Claude that can:
 - **Notify** via Microsoft Teams — health alerts, change updates, and report delivery to Teams channels
 - **Analyze** packet captures — upload a pcap to Slack and NetClaw runs deep tshark analysis: protocol hierarchy, conversations, endpoints, DNS/HTTP extraction, expert info, and filtered inspection
 - **Track** network changes in GitHub — create issues from findings, commit config backups, open PRs for changes, link to ServiceNow CRs
+- **Manage** Jenkins CI/CD pipelines (16 tools via remote HTTP) — monitor job and build status, trigger parameterized builds with human-in-the-loop confirmation, analyze build logs with regex search, track SCM changes and correlate commits with builds, verify Jenkins health and authentication — via the official Jenkins MCP Server plugin (Streamable HTTP transport)
+- **Track** Jira issues and Confluence pages (72 tools via stdio) — search issues with JQL, create and update issues with human-in-the-loop, transition through workflows, link issues, manage Confluence pages with CQL search, create postmortems and runbooks, cross-product incident-to-documentation workflows — via the community mcp-atlassian server (Cloud + Server/DC support)
 - **Orchestrate** network services via Cisco NSO — retrieve device configs from NSO's CDB, check sync status, inspect operational state, discover service types and deployed instances, platform inventory, and NED management — all via RESTCONF from Slack
 - **Simulate** network topologies in Cisco CML — create labs, add nodes, wire links, start/stop labs, execute CLI commands, capture packets on lab links, and manage CML users — all from natural language via Slack
 - **Deploy** containerized network labs via ContainerLab — deploy multi-vendor topologies (SR Linux, cEOS, IOS XR, NX-OS, FRR, cRPD), inspect running labs, execute commands on nodes, and destroy labs when done — all through the ContainerLab API
@@ -89,14 +163,95 @@ NetClaw is an autonomous network engineering agent powered by Claude that can:
 - **Audit** AWS security — IAM users/roles/policies (read-only), CloudTrail API event history, credential rotation compliance, MFA enforcement
 - **Analyze** AWS costs — service breakdowns, network cost drivers (NAT GW, TGW, VPN, data transfer), monthly trends, forecasts, anomaly investigation
 - **Diagram** AWS architecture — auto-discover and render VPCs, subnets, TGWs, load balancers as visual topology diagrams (requires graphviz)
+- **Stream** gNMI telemetry from Cisco IOS-XR, Juniper, Arista, and Nokia SR OS devices — structured YANG model queries, SAMPLE/ON_CHANGE subscriptions, ITSM-gated configuration changes, YANG capability browsing, and gNMI-vs-CLI state comparison
 - **Audit** every action in an immutable Git-based trail (GAIT) — there is always an answer to "what did the AI do and why"
+- **Track** token consumption and cost in real-time — every interaction displays input/output tokens, USD cost, and TOON savings. Session-level tracking with per-tool breakdown. Powered by Anthropic's `count_tokens()` API with local estimation fallback
+- **Optimize** token usage with TOON serialization — all MCP server responses use TOON format (Tabular Object Oriented Notation) for 40-60% token savings on tabular network data (route tables, interface lists, BGP peers). Automatic JSON fallback on errors
+- **Remember** across sessions with [MemPalace](https://github.com/milla-jovovich/mempalace) — semantic search across all past sessions, temporal knowledge graph for network facts (upgrades, peer changes, maintenance windows) with validity windows, cross-domain navigation between wings, and per-agent diaries. Complements OpenClaw's file-based daily logs (`memory/YYYY-MM-DD.md`) with structured, searchable long-term memory — *"GAIT records what happened. MemPalace remembers why."*
+- **Secure** production deployments with [DefenseClaw](https://github.com/cisco-ai-defense/defenseclaw) — Cisco AI Defense enterprise security: OpenShell kernel-level sandbox (Landlock, seccomp, namespaces), component scanning before execution, CodeGuard static analysis, LLM prompt/completion inspection, runtime guardrails, SQLite audit logging with SIEM export (Splunk HEC, OTLP) for SOC2/PCI-DSS/HIPAA compliance
+
+---
+
+## Enterprise Security
+
+NetClaw includes **DefenseClaw** from Cisco AI Defense as the recommended enterprise security layer:
+
+| Feature | Description |
+|---------|-------------|
+| **OpenShell Sandbox** | Kernel-level isolation (Landlock, seccomp, network namespaces) |
+| **Component Scanning** | Skills, MCPs, and plugins scanned before execution |
+| **CodeGuard Analysis** | Detect hardcoded credentials, eval, shell commands, SQL injection |
+| **Runtime Guardrails** | LLM inspection + tool call inspection with 6 rule categories |
+| **Audit Logging** | SQLite database with SIEM export (Splunk HEC, OTLP) |
+
+### Enable DefenseClaw
+
+```bash
+# During installation
+./scripts/install.sh
+# Answer "y" to "Enable DefenseClaw (recommended)?"
+
+# Or enable later
+./scripts/defenseclaw-enable.sh
+```
+
+### Key Commands
+
+```bash
+defenseclaw --version              # Check installation
+defenseclaw skill scan <name>      # Scan a skill before use
+defenseclaw tool block <tool>      # Block a dangerous tool
+defenseclaw alerts                 # View security alerts
+```
+
+**Full documentation:** [docs/DEFENSECLAW.md](docs/DEFENSECLAW.md) | [Security Principles](docs/SOUL-DEFENSE.md) | [Upgrade Guide](docs/UPGRADE-TO-DEFENSECLAW.md)
+
+---
+
+## Check Point Security Integration
+
+NetClaw integrates with Check Point's enterprise security platform through **15 official MCP servers**, providing AI-powered automation for firewall policies, threat intelligence, gateway diagnostics, SASE management, and malware analysis.
+
+| Domain | MCP Servers | Capabilities |
+|--------|-------------|--------------|
+| **Policy Management** | management, policy-insights | Audit rules, suggest optimizations, NAT review |
+| **Threat Intelligence** | reputation-service | IP/URL/file reputation lookups |
+| **Gateway Diagnostics** | quantum-gw-cli, gw-connection-analysis | Health, ClusterXL, connection debug |
+| **Threat Prevention** | threat-prevention | IPS signatures, IOC feeds, profiles |
+| **SASE** | harmony-sase | Cloud-delivered security regions and apps |
+| **Malware Analysis** | threat-emulation | File sandboxing and verdicts |
+| **HTTPS Inspection** | https-inspection | SSL/TLS decryption policies |
+| **More** | gaia, docs, spark, cpinfo, argos, logs | OS mgmt, docs search, MSP, diagnostics, ERM |
+
+### Enable Check Point Integration
+
+```bash
+# During installation
+./scripts/install.sh
+# Answer "y" to "Enable Check Point Security Integration?"
+
+# Or enable for existing installation
+./scripts/checkpoint-enable.sh
+```
+
+### Example Queries
+
+```
+/checkpoint show me all firewall policies
+/checkpoint check reputation of IP 185.220.101.1
+/checkpoint show gateway health status
+/checkpoint what IPS protections are available for CVE-2024-1234
+/checkpoint cross-reference firewall rules with my CML lab topology
+```
+
+**Full documentation:** [docs/CHECKPOINT.md](docs/CHECKPOINT.md) | [Skill Definition](workspace/skills/checkpoint/SKILL.md)
 
 ---
 
 ## Architecture
 
 ```
-Human (Slack / WebChat) --> NetClaw (CCIE Agent on OpenClaw)
+Human (Slack / WebEx / WebChat) --> NetClaw (CCIE Agent on OpenClaw)
                                 |
                                 |-- DEVICE AUTOMATION:
                                 |     MCP: pyATS           --> IOS-XE / NX-OS / IOS-XR devices
@@ -104,6 +259,10 @@ Human (Slack / WebChat) --> NetClaw (CCIE Agent on OpenClaw)
                                 |     MCP: F5 BIG-IP       --> iControl REST (virtuals, pools, iRules)
                                 |     MCP: Catalyst Center --> DNA-C API (devices, clients, sites)
                                 |     MCP: Arista CVP      --> CloudVision REST API (inventory, events, tags)
+                                |
+                                |-- gNMI TELEMETRY:
+                                |     MCP: gNMI MCP        --> gNMI Get/Set/Subscribe/Capabilities (10 tools)
+                                |                              IOS-XR, Juniper, Arista, Nokia via pygnmi
                                 |
                                 |-- INFRASTRUCTURE:
                                 |     MCP: Cisco ACI       --> APIC / ACI fabric
@@ -131,6 +290,7 @@ Human (Slack / WebChat) --> NetClaw (CCIE Agent on OpenClaw)
                                 |
                                 |-- FIREWALL SECURITY:
                                 |     MCP: Cisco FMC          --> Access policy search, FTD targeting, multi-FMC
+                                |     MCP: Check Point (15)   --> Policy, threat intel, gateway, SASE, malware (40+ tools)
                                 |
                                 |-- CLOUD-MANAGED NETWORKING:
                                 |     MCP: Cisco Meraki       --> Dashboard API (~804 endpoints): wireless, switching, security, cameras
@@ -149,6 +309,7 @@ Human (Slack / WebChat) --> NetClaw (CCIE Agent on OpenClaw)
                                 |     MCP: Grafana            --> Dashboards, Prometheus, Loki, alerting, incidents, OnCall (75+ tools via uvx)
                                 |     MCP: Prometheus         --> Direct PromQL queries, metric discovery, target health (6 tools via pip)
                                 |     MCP: Kubeshark          --> K8s L4/L7 traffic capture, TLS decryption, pcap export, flow analysis (6 tools, remote HTTP)
+                                |     MCP: SuzieQ             --> Network state queries, assertions, summaries, path tracing (5 tools, stdio)
                                 |
                                 |-- PROTOCOL PARTICIPATION:
                                 |     MCP: Protocol MCP      --> BGP/OSPF/GRE speakers (10 tools, scapy)
@@ -171,6 +332,9 @@ Human (Slack / WebChat) --> NetClaw (CCIE Agent on OpenClaw)
                                 |     MCP: Cloud Logging      --> Log search, VPC flow logs, audit (6 tools)
                                 |     MCP: Resource Manager   --> Project discovery (1 tool)
                                 |
+                                |-- INLINE VISUALIZATION:
+                                |     Skill: Canvas A2UI   --> Topology maps, dashboards, alerts, timelines, diffs, paths, scorecards
+                                |
                                 |-- UTILITIES:
                                 |     MCP: Subnet Calc     --> IPv4 + IPv6 CIDR calculator
                                 |     MCP: GAIT            --> Git-based AI audit trail
@@ -178,6 +342,12 @@ Human (Slack / WebChat) --> NetClaw (CCIE Agent on OpenClaw)
                                 |     MCP: Markmap         --> Mind map visualizations
                                 |     MCP: Draw.io         --> Network topology diagrams
                                 |     MCP: UML MCP         --> 27+ diagram types via Kroki
+                                |
+                                |-- COLLABORATION:
+                                |     Channel: Slack         --> Bidirectional via WebSocket (OpenClaw built-in)
+                                |     Channel: Cisco WebEx   --> Bidirectional via webhooks (@jimiford/webex plugin)
+                                |     MCP: Microsoft Graph   --> Teams, SharePoint, OneDrive, Visio
+                                |
                                 '     MCP: RFC Lookup      --> IETF standards reference
 ```
 
@@ -202,7 +372,7 @@ NetClaw ships with the full set of OpenClaw workspace markdown files. These are 
 
 ---
 
-## MCP Servers (37)
+## MCP Servers (72)
 
 | # | MCP Server | Repository | Transport | Function |
 |---|------------|------------|-----------|----------|
@@ -252,12 +422,34 @@ NetClaw ships with the full set of OpenClaw workspace markdown files. These are 
 | 44 | Grafana | [grafana/mcp-grafana](https://github.com/grafana/mcp-grafana) | uvx (Go) | Observability platform — dashboards, Prometheus PromQL, Loki LogQL, alerting, incidents, OnCall, annotations, panel rendering (75+ tools) |
 | 45 | Prometheus | [pab1it0/prometheus-mcp-server](https://github.com/pab1it0/prometheus-mcp-server) | stdio (Python) | Direct PromQL monitoring — instant/range queries, metric discovery with pagination, metric metadata, scrape target health, system health check (6 tools) |
 | 46 | Kubeshark | [kubeshark/kubeshark](https://github.com/kubeshark/kubeshark) | remote HTTP (Go) | Kubernetes L4/L7 traffic analysis — capture, pcap export, snapshots, KFL filtering, TCP/UDP flow stats, TLS decryption via eBPF (6 tools) |
+| 47 | nmap | [sbmilburn/nmap-mcp](https://github.com/sbmilburn/nmap-mcp) | stdio (Python) | Network scanning — host discovery, SYN/TCP/UDP port scanning, service/OS detection, NSE scripts, vuln scanning with CIDR allowlist + audit logging (14 tools) |
+| 48 | gtrace | [hervehildenbrand/gtrace](https://github.com/hervehildenbrand/gtrace) | stdio (Go binary) | Advanced traceroute (MPLS/ECMP/NAT detection), MTR continuous monitoring, GlobalPing distributed probes (500+ locations), ASN lookup, geolocation, reverse DNS (6 tools) |
+| 49 | AAP Controller | [sibilleb/AAP-Enterprise-MCP-Server](https://github.com/sibilleb/AAP-Enterprise-MCP-Server) | stdio (Python) | Red Hat Ansible Automation Platform — inventories, job templates, projects, ad-hoc commands, host management, Galaxy content discovery (45 tools) |
+| 50 | AAP EDA | [sibilleb/AAP-Enterprise-MCP-Server](https://github.com/sibilleb/AAP-Enterprise-MCP-Server) | stdio (Python) | Event-Driven Ansible — activation lifecycle, rulebooks, decision environments, event streams (12 tools) |
+| 51 | AAP Lint | [sibilleb/AAP-Enterprise-MCP-Server](https://github.com/sibilleb/AAP-Enterprise-MCP-Server) | stdio (Python) | ansible-lint playbook/role validation, syntax checking, best practices, project analysis (9 tools) |
+| 52 | Red Hat Docs | [sibilleb/AAP-Enterprise-MCP-Server](https://github.com/sibilleb/AAP-Enterprise-MCP-Server) | stdio (Python) | Red Hat documentation access — PDF-first content, domain-validated 50+ official sites, telco/edge recommendations |
+| 53 | fwrule | [AutomateIP/fwrule-mcp](https://github.com/AutomateIP/fwrule-mcp) | stdio (Python) | Multi-vendor firewall rule analysis — overlap detection, shadowing, conflicts, duplication across 9 vendors: PAN-OS, ASA, FTD, IOS/IOS-XE, IOS-XR, Check Point, SRX, Junos, Nokia SR OS (3 tools) |
+| 54 | SuzieQ | Built-in | stdio (Python) | Network observability — query 20+ tables (show/summarize/assert/unique), time-travel queries, path tracing, BGP/OSPF/interface/EVPN assertions (5 tools) |
+| 55 | gNMI MCP | Built-in | stdio (Python) | gNMI streaming telemetry — Get, Set (ITSM-gated), Subscribe (SAMPLE/ON_CHANGE), Capabilities, YANG path browsing, CLI comparison. Cisco IOS-XR, Juniper, Arista, Nokia SR OS via pygnmi (10 tools) |
+| 56 | GNS3 | Built-in | stdio (Python) | Network lab management — projects (create/clone/export/import), nodes (create from templates, start/stop/suspend/reload, console), links, packet capture, snapshots (26 tools) |
+| 57 | Prisma SD-WAN | [iamdheerajdubey/prisma-sdwan-mcp](https://github.com/iamdheerajdubey/prisma-sdwan-mcp) | stdio (Python) | Palo Alto Networks Prisma SD-WAN read-only visibility — sites, elements, topology, status, alarms, events, interfaces, BGP, routes, policies, security zones, applications (15+ tools) |
+| 58 | Datadog | [Datadog MCP](https://mcp://datadog.com/mcp) | Remote HTTP | Full observability stack — logs, metrics, incidents, APM, dashboards with optional toolsets: error_tracking, feature_flags, dbm, security, llm_observability (16+ tools) |
+| 59 | PagerDuty | [pagerduty-mcp](https://pypi.org/project/pagerduty-mcp/) | uvx (Python) | Incident management — incidents, on-call schedules, services, escalation policies, event orchestration with read/write capabilities (70 tools) |
+| 60 | Splunk | [splunk-mcp](https://pypi.org/project/splunk-mcp/) | uvx (Python) | Log analytics and SIEM — SPL search, indexes, saved searches, alerts, dashboards for security and operations (30 tools) |
+| 61 | Terraform Cloud | [Terraform MCP](https://mcp://terraform.io/mcp) | Remote HTTP | Infrastructure as Code — workspaces, runs, state management, variables, and policy compliance (40+ tools) |
+| 62 | HashiCorp Vault | [Vault MCP](https://mcp://vault.hashicorp.com/mcp) | Remote HTTP | Secrets management — KV secrets, PKI certificates, transit encryption, authentication methods, audit logging (35+ tools) |
+| 63 | Zscaler | [Zscaler MCP](https://mcp://zscaler.com/mcp) | Remote HTTP | Zero Trust security — ZIA (SWG), ZPA (ZTNA), ZDX (DEM), identity management, and security insights (300+ tools) |
+| 64-68 | Cloudflare | [Cloudflare MCP](https://mcp://cloudflare.com/*) | Remote HTTP | Edge platform (5 servers) — DNS analytics, WAF/DDoS security, Zero Trust access, traffic analytics, Workers compute (50+ tools) |
+| 69 | Blender | [blender-mcp](https://github.com/ahujasid/blender-mcp) | uvx (Python) | 3D network topology visualization — draw CDP/LLDP topologies in Blender, color by device type, export PNG/video, add labels (5 tools) |
+| 70 | Aruba CX | [slientnight/aruba-cx-mcp-server](https://github.com/slientnight/aruba-cx-mcp-server) | stdio (Python) | HPE Aruba CX switch management — system info, interfaces, VLANs, configs, routing, LLDP, MAC table, DOM diagnostics, ISSU, VSF topology. 11 read-only + 5 ITSM-gated write tools (16 tools) |
+| 71 | DevNet Content Search | [CiscoDevNet/devnet-content-search-mcp](https://github.com/CiscoDevNet/devnet-content-search-mcp) | Remote HTTP | Cisco DevNet documentation search — Meraki API doc search, Catalyst Center API doc search, Meraki operation ID lookup. No auth required (3 tools) |
+| 72 | HumanRail | [prime001/humanrail-mcp-server](https://github.com/prime001/humanrail-mcp-server) | Streamable HTTP (Python) | Human-in-the-loop escalation — route low-confidence decisions, pre-destructive operation approvals, and ambiguous incident tickets to human engineers; workers paid via Lightning Network. Free while in beta. (7 tools) |
 
-All MCP servers communicate via stdio (JSON-RPC 2.0) through `scripts/mcp-call.py`. GitHub MCP runs via Docker. CML MCP is pip-installed (`cml-mcp`). NSO MCP is pip-installed (`cisco-nso-mcp-server`). FMC MCP runs as an HTTP server on port 8000. Meraki Magic MCP runs via FastMCP stdio (~804 Dashboard API endpoints). ThousandEyes community MCP runs via stdio (9 read-only tools); ThousandEyes official MCP is a remote HTTP endpoint hosted by Cisco at `https://api.thousandeyes.com/mcp` (~20 tools via `npx mcp-remote`). RADKit MCP runs via FastMCP stdio with certificate-based cloud relay auth (5 tools for remote device access). Nautobot MCP runs via MCP SDK stdio (5 IPAM tools, alternative to NetBox). Infrahub MCP runs via stdio (10 tools for schema-driven SoT, GraphQL queries, and versioned branches). Itential MCP is pip-installed (`itential-mcp`) and runs via stdio (65+ tools for network automation orchestration). JunOS MCP runs via stdio (10 tools for PyEZ/NETCONF device automation). Arista CVP MCP runs via uv/stdio (4 tools for CloudVision Portal device inventory, events, connectivity monitoring, and tag management). UML MCP runs via stdio (2 tools for 27+ diagram types via Kroki multi-engine rendering). Protocol MCP runs via stdio (10 tools for live BGP/OSPF/GRE control-plane participation using scapy-based protocol speakers). ContainerLab MCP runs via stdio (6 tools for containerized network lab lifecycle management via ContainerLab API). SD-WAN MCP runs via stdio (12 read-only tools for Cisco SD-WAN vManage fabric monitoring). Grafana MCP runs via `uvx mcp-grafana` (75+ tools for dashboards, Prometheus, Loki, alerting, incidents, OnCall). Prometheus MCP is pip-installed (`prometheus-mcp-server`) and runs via stdio (6 tools for direct PromQL queries, metric discovery, and scrape target health). Kubeshark MCP is a remote HTTP endpoint running inside a Kubernetes cluster (6 tools for L4/L7 traffic capture, pcap export, flow analysis, and TLS decryption via eBPF; access via `kubectl port-forward svc/kubeshark-hub 8898:8898`). AWS MCPs run via `uvx` (uv tool runner). GCP MCPs are remote HTTP endpoints hosted by Google (OAuth 2.0 auth). No persistent connections, no port management.
+HumanRail MCP runs via FastMCP streamable HTTP (Python) on port 8100 (`git clone` + `pip install "mcp[cli]>=1.0.0" httpx` + `python3 server.py`). Auth via `HUMANRAIL_API_KEY` Bearer token. Public hosted endpoint also available at `https://humanrail.dev/mcp` — set `HUMANRAIL_MCP_URL=https://humanrail.dev/mcp` to skip local install. Get a free API key at [humanrail.dev](https://humanrail.dev). All MCP servers communicate via stdio (JSON-RPC 2.0) through `scripts/mcp-call.py`. GitHub MCP runs via Docker. CML MCP is pip-installed (`cml-mcp`). NSO MCP is pip-installed (`cisco-nso-mcp-server`). FMC MCP runs as an HTTP server on port 8000. Meraki Magic MCP runs via FastMCP stdio (~804 Dashboard API endpoints). ThousandEyes community MCP runs via stdio (9 read-only tools); ThousandEyes official MCP is a remote HTTP endpoint hosted by Cisco at `https://api.thousandeyes.com/mcp` (~20 tools via `npx mcp-remote`). RADKit MCP runs via FastMCP stdio with certificate-based cloud relay auth (5 tools for remote device access). Nautobot MCP runs via MCP SDK stdio (5 IPAM tools, alternative to NetBox). Infrahub MCP runs via stdio (10 tools for schema-driven SoT, GraphQL queries, and versioned branches). Itential MCP is pip-installed (`itential-mcp`) and runs via stdio (65+ tools for network automation orchestration). JunOS MCP runs via stdio (10 tools for PyEZ/NETCONF device automation). Arista CVP MCP runs via uv/stdio (4 tools for CloudVision Portal device inventory, events, connectivity monitoring, and tag management). UML MCP runs via stdio (2 tools for 27+ diagram types via Kroki multi-engine rendering). Protocol MCP runs via stdio (10 tools for live BGP/OSPF/GRE control-plane participation using scapy-based protocol speakers). ContainerLab MCP runs via stdio (6 tools for containerized network lab lifecycle management via ContainerLab API). SD-WAN MCP runs via stdio (12 read-only tools for Cisco SD-WAN vManage fabric monitoring). Grafana MCP runs via `uvx mcp-grafana` (75+ tools for dashboards, Prometheus, Loki, alerting, incidents, OnCall). Prometheus MCP is pip-installed (`prometheus-mcp-server`) and runs via stdio (6 tools for direct PromQL queries, metric discovery, and scrape target health). Kubeshark MCP is a remote HTTP endpoint running inside a Kubernetes cluster (6 tools for L4/L7 traffic capture, pcap export, flow analysis, and TLS decryption via eBPF; access via `kubectl port-forward svc/kubeshark-hub 8898:8898`). nmap MCP runs via FastMCP stdio (14 tools for host discovery, port scanning, service/OS detection, NSE scripts, and vulnerability scanning with CIDR scope enforcement and audit logging). gtrace MCP runs via `gtrace mcp` stdio (6 tools for advanced traceroute with MPLS/ECMP/NAT detection, MTR continuous monitoring, GlobalPing distributed probes, ASN lookup, geolocation, and reverse DNS). AWS MCPs run via `uvx` (uv tool runner). GCP MCPs are remote HTTP endpoints hosted by Google (OAuth 2.0 auth). AAP Enterprise MCP provides 4 independent servers via `uv run` stdio: Controller (45 tools for inventories, jobs, projects, ad-hoc commands, Galaxy), EDA (12 tools for event-driven activations, rulebooks, decision environments), ansible-lint (9 tools for playbook/role validation and best practices), and Red Hat Docs (documentation search with domain validation). fwrule MCP runs via `uv run fwrule-mcp` stdio (3 tools for multi-vendor firewall rule overlap, shadowing, conflict, and duplication analysis across 9 vendors using 6-dimensional set intersection). SuzieQ MCP runs via stdio (5 read-only tools for network state queries, assertions, summaries, unique value discovery, and path tracing across 20+ network tables via the SuzieQ REST API). GNS3 MCP runs via FastMCP stdio (26 tools for GNS3 network lab management — projects, nodes, links, packet capture, and snapshots via REST API v3). No persistent connections, no port management.
 
 ---
 
-## Skills (82)
+## Skills (126)
 
 ### pyATS Device Skills (9)
 
@@ -302,7 +494,7 @@ All MCP servers communicate via stdio (JSON-RPC 2.0) through `scripts/mcp-call.p
 | **pyats-f5-ltm** | [pyATS MCP](https://github.com/automateyournetwork/pyats_mcp) (stdio) | F5 BIG-IP LTM/GTM operations via pyATS iControl REST — virtual servers, pools, nodes, monitors, profiles, iRules, persistence, GTM wide IPs, DNS, data groups |
 | **pyats-f5-platform** | [pyATS MCP](https://github.com/automateyournetwork/pyats_mcp) (stdio) | F5 BIG-IP platform operations via pyATS iControl REST — system, networking, HA/CM, auth, analytics, security, APM, live-update, ADC certs, file management |
 
-### Domain Skills (9)
+### Domain Skills (10)
 
 | Skill | What It Does |
 |-------|-------------|
@@ -315,6 +507,7 @@ All MCP servers communicate via stdio (JSON-RPC 2.0) through `scripts/mcp-call.p
 | **ise-incident-response** | Endpoint investigation: lookup by MAC/IP/username, auth history, posture/profile review, risk assessment. **Human decision point required** before any quarantine action. ServiceNow Security Incident creation. GAIT audit. |
 | **servicenow-change-workflow** | Full ITSM lifecycle: pre-change incident check, CR creation, approval gate, execution coordination, post-change verification, rollback procedure, CR closure/escalation. Supports Normal, Standard, and Emergency change types. |
 | **gait-session-tracking** | Mandatory Git-based audit trail. Session branch creation, turn recording (prompt/response/artifacts), session log display. 9 GAIT tools: status, init, branch, checkout, record_turn, log, show, pin, summarize_and_squash. |
+| **humanrail-escalation** | Human-in-the-loop escalation via HumanRail (7 tools): create tasks for human review (low-confidence decisions, pre-destructive approvals, incident triage), wait for verified output, cancel pending tasks, list tasks, and check usage. Workers are paid via Lightning Network. Free API while in beta — sign up at [humanrail.dev](https://humanrail.dev). Complements ServiceNow CR gating and ISE incident response. |
 
 ### F5 BIG-IP Skills (3)
 
@@ -352,6 +545,21 @@ All MCP servers communicate via stdio (JSON-RPC 2.0) through `scripts/mcp-call.p
 |-------|-------------|
 | **packet-analysis** | Deep pcap analysis via tshark. Upload a `.pcap` or `.pcapng` file to Slack and NetClaw analyzes it: protocol hierarchy, IP/TCP/UDP conversations, top endpoints, DNS queries, HTTP requests, expert info (retransmissions, errors), filtered packet inspection, and full JSON decode. 12 MCP tools for comprehensive L2-L7 packet investigation. |
 
+### nmap Network Scanning Skills (3)
+
+| Skill | What It Does |
+|-------|-------------|
+| **nmap-network-scan** | Host discovery and port scanning — ICMP/ARP host discovery, SYN/TCP/UDP port scanning on authorized networks. CIDR scope enforcement and audit logging. 6 tools for subnet discovery and targeted port scanning. |
+| **nmap-service-detection** | Service fingerprinting, OS detection, NSE scripts, and vulnerability scanning. Full recon sweeps combining SYN scan + service detection + OS fingerprinting + default NSE scripts. 5 tools for security assessment. |
+| **nmap-scan-management** | Custom nmap scans with arbitrary flags (scope-enforced), scan history listing, and result retrieval by ID. Before/after comparison workflows for change validation. 3 tools. |
+
+### gtrace Path Analysis & IP Enrichment Skills (2)
+
+| Skill | What It Does |
+|-------|-------------|
+| **gtrace-path-analysis** | Advanced traceroute with MPLS label detection, ECMP path discovery, and NAT translation detection. Continuous MTR monitoring with per-hop loss%, jitter, and latency stats. Distributed GlobalPing probes from 500+ worldwide locations for global path comparison. 3 tools for comprehensive network path troubleshooting. |
+| **gtrace-ip-enrichment** | IP address enrichment: ASN ownership lookup (AS number, organization, network CIDR, RIR), geolocation (city, region, country, coordinates, timezone), and reverse DNS resolution (PTR records). Use to enrich traceroute hops, investigate unknown IPs, or verify BGP peer identity. 3 tools. |
+
 ### Cisco CML Skills (5)
 
 | Skill | What It Does |
@@ -367,6 +575,34 @@ All MCP servers communicate via stdio (JSON-RPC 2.0) through `scripts/mcp-call.p
 | Skill | What It Does |
 |-------|-------------|
 | **clab-lab-management** | Containerized network lab lifecycle via ContainerLab API (6 tools): authenticate with clab-api-server, list running labs, deploy multi-vendor topologies (SR Linux, cEOS, IOS XR, NX-OS, FTDv, FRR, cRPD, generic Linux), inspect lab details with management IPs, execute commands on individual or all nodes, and graceful lab destruction with cleanup. Supports spine-leaf fabrics, multi-vendor interop labs, and protocol testing topologies. Requires ContainerLab API server running (Docker or native). GAIT audit trail. |
+
+### GNS3 Skills (5)
+
+| Skill | What It Does |
+|-------|-------------|
+| **gns3-project-lifecycle** | GNS3 project management (9 tools): list, create, get, open, close, delete, clone, export, and import projects. Build and manage network lab environments via GNS3 REST API v3. |
+| **gns3-node-operations** | GNS3 node operations (8 tools): list nodes, create from templates with fuzzy matching, start/stop/suspend/reload individual or bulk nodes, get console connection info. Supports IOSv, NX-OSv, IOS-XR, Arista, Juniper, and appliance templates. |
+| **gns3-link-management** | GNS3 link and topology building (4 tools): list links, create links between node interfaces with natural interface naming (eth0, Gi0/0, etc.), delete links, isolate/unisolate nodes for fault injection testing. |
+| **gns3-packet-capture** | GNS3 packet capture (3 tools): start/stop captures on links, retrieve capture file paths and stream URLs for live Wireshark analysis. PCAP format compatible with Packet Buddy deep analysis. |
+| **gns3-snapshot-ops** | GNS3 snapshot management (4 tools): list, create, restore, and delete project snapshots. Save checkpoints before risky changes and restore to known-good states for safe experimentation. |
+
+### Prisma SD-WAN Skills (4)
+
+| Skill | What It Does |
+|-------|-------------|
+| **prisma-sdwan-topology** | Prisma SD-WAN topology discovery (4 tools): list sites with element counts, list ION devices (elements) by site, retrieve hardware inventory (machines with serial numbers), get full network topology graph showing site-to-site VPN connections. |
+| **prisma-sdwan-status** | Prisma SD-WAN health monitoring (4 tools): get element operational status (online/offline/degraded, CPU/memory), check software versions and upgrade state, list recent events with configurable limit, view active critical/major alarms. |
+| **prisma-sdwan-config** | Prisma SD-WAN configuration inspection (7 tools): list LAN/WAN interfaces per element, view BGP peer configurations, retrieve static route tables, list policy sets, view security zones, generate validated YAML site config for offline review. |
+| **prisma-sdwan-apps** | Prisma SD-WAN application visibility (1 tool): list application definitions with classification details (category, risk level, app type). Understand application awareness rules driving SD-WAN policy decisions. |
+
+### Aruba CX Switching Skills (4)
+
+| Skill | What It Does |
+|-------|-------------|
+| **aruba-cx-system** | Aruba CX system discovery (3 tools): get system info (hostname, model, serial, version, uptime), firmware versions (primary/secondary images, ISSU capability), VSF topology (cluster members, roles, serial numbers). Read-only operations for switch inventory and audit. |
+| **aruba-cx-interfaces** | Aruba CX interface monitoring (3 tools): interface status (admin/oper state, speed, description), LLDP neighbors (remote device, port, capabilities), DOM diagnostics (TX/RX power, temperature with threshold violation alerts). Read-only operations for connectivity troubleshooting. |
+| **aruba-cx-switching** | Aruba CX Layer 2 operations (5 tools): VLAN discovery (IDs, names, port assignments), MAC address table queries (with VLAN/MAC filtering), VLAN management (create/configure/delete with ITSM gating). Write operations require ServiceNow CR when ITSM_ENABLED. |
+| **aruba-cx-config** | Aruba CX configuration management (8 tools): running/startup config viewing, routing table queries, config save (ITSM-gated), ISSU status/upgrade (ITSM-gated), firmware upload/download (ITSM-gated). Write operations require ServiceNow CR for production environments. |
 
 ### Cisco NSO Skills (2)
 
@@ -387,11 +623,39 @@ All MCP servers communicate via stdio (JSON-RPC 2.0) through `scripts/mcp-call.p
 |-------|-------------|
 | **fmc-firewall-ops** | Cisco Secure Firewall policy search via FMC REST API (4 tools): list FMC profiles for multi-FMC environments, search access rules by IP/FQDN within a policy, resolve FTD devices to their assigned policies and search, FMC-wide rule search with network indicators (IP, FQDN), identity indicators (SGT, realm users/groups), and policy name filters. Read-only firewall rule audit, connectivity verification ("can Host A reach Host B?"), SGT policy review, and cross-FMC consistency analysis. |
 
+### Firewall Rule Analysis Skills (1)
+
+| Skill | What It Does |
+|-------|-------------|
+| **fwrule-analyzer** | Multi-vendor firewall rule analysis (3 tools): overlap detection, shadowing identification, conflict analysis, and duplication checking across 9 vendors (PAN-OS, ASA, FTD, IOS/IOS-XE, IOS-XR, Check Point, SRX, Junos, Nokia SR OS). Uses 6-dimensional set intersection (zones, addresses, ports, protocols, actions, applications). Two input modes: vendor-native config via built-in parsers or pre-normalized JSON. Parse policies to standardized schema, analyze candidate rules against existing rulesets, enumerate supported vendors. Pre-change validation, cross-vendor policy audit, and ruleset hygiene workflows. No credentials required — pure offline analysis engine. |
+
+### Ansible Automation Platform Skills (3)
+
+| Skill | What It Does |
+|-------|-------------|
+| **aap-automation** | Red Hat Ansible Automation Platform operations (45 tools): inventory management (list, create, update, delete), host management (add, update, delete, facts, failed hosts), group management, job template execution with extra vars and monitoring, project SCM sync and update tracking, dynamic inventory sources, ad-hoc command execution, Ansible Galaxy collection and role discovery. Full automation lifecycle from inventory audit through playbook execution to result verification. |
+| **aap-eda** | Event-Driven Ansible operations (12 tools): activation lifecycle management (list, create, enable, disable, restart, delete), rulebook listing and inspection, decision environment management, event stream monitoring. Reactive automation triggered by external events flowing into EDA rulebooks. |
+| **aap-lint** | ansible-lint playbook and role validation (9 tools): lint playbook content with configurable profiles (min/basic/moderate/safety/shared/production), lint individual files and role directories, list available rules and tags, syntax validation, best practice checking with severity categorization, project-wide analysis with per-file issue reporting, version info. Quality gate for Ansible content before AAP deployment. |
+
+### Enterprise Platform Skills (3)
+
+| Skill | What It Does |
+|-------|-------------|
+| **infoblox-ddi** | Infoblox DNS, DHCP, and IPAM operations: zone and record lookup, DHCP scope and lease review, IP utilization checks, and pre-change address validation. |
+| **paloalto-panorama** | Panorama-managed firewall governance: device groups, templates, security policy and NAT search, object review, and commit validation. |
+| **fortimanager-ops** | FortiManager policy operations: ADOM inventory, package and rule review, revision history, and install-preview checks. |
+
 ### Cisco RADKit Skills (1)
 
 | Skill | What It Does |
 |-------|-------------|
 | **radkit-remote-access** | Cloud-relayed remote device access via Cisco RADKit (5 tools): discover device inventory from RADKit service, inspect device attributes (type, platform, SNMP/NETCONF capabilities), execute CLI commands with timeout and line-limit controls through the cloud relay, perform SNMP GET operations for lightweight metric polling (uptime, interface counters, CPU), and structured command execution with status tracking. Bridges cloud-hosted agents to air-gapped or on-premises devices without direct SSH/SNMP connectivity — ideal for multi-site operations, secure environments requiring certificate-based auth, and hybrid cloud-to-on-prem workflows. |
+
+### Data Center Fabric Skills (1)
+
+| Skill | What It Does |
+|-------|-------------|
+| **evpn-vxlan-fabric** | Vendor-neutral EVPN/VXLAN fabric audit and troubleshooting: VTEP reachability, VNI mapping, EVPN route types, multihoming/ESI state, and underlay/overlay correlation. |
 
 ### Juniper JunOS Skills (1)
 
@@ -441,6 +705,12 @@ All MCP servers communicate via stdio (JSON-RPC 2.0) through `scripts/mcp-call.p
 |-------|-------------|
 | **kubeshark-traffic** | Kubeshark Kubernetes L4/L7 traffic analysis (6 tools): capture traffic across cluster pods (`capture_traffic`), export pcaps for Wireshark/tshark analysis (`export_pcap`), create point-in-time traffic snapshots (`create_snapshot`), apply Kubeshark Filter Language expressions (`apply_filter`), list TCP/UDP flows with RTT metrics and byte counts (`list_l4_flows`), get top-talker summaries with protocol distribution (`get_l4_flow_summary`). Automatic TLS/HTTPS decryption via eBPF. Dissects HTTP, gRPC, GraphQL, Redis, Kafka, DNS with full request/response payloads. Remote HTTP MCP server running inside K8s cluster (port 8898). Integrates with packet-analysis for deeper pcap inspection. GAIT audit trail. |
 
+### SuzieQ Network Observability Skills (1)
+
+| Skill | What It Does |
+|-------|-------------|
+| **suzieq-observability** | SuzieQ network observability (5 read-only tools): query current and historical network state from 20+ tables (`suzieq_show`), get aggregated statistics and summary views (`suzieq_summarize`), run validation assertions for BGP/OSPF/interface/EVPN health (`suzieq_assert`), discover distinct values and distributions for any column (`suzieq_unique`), trace hop-by-hop forwarding paths between endpoints (`suzieq_path`). Supports time-travel queries via start_time/end_time for historical analysis. Wraps SuzieQ REST API via async httpx client with stdio transport. GAIT audit trail. |
+
 ### Cisco Meraki Skills (5)
 
 | Skill | What It Does |
@@ -476,6 +746,68 @@ All MCP servers communicate via stdio (JSON-RPC 2.0) through `scripts/mcp-call.p
 | **gcp-cloud-monitoring** | Cloud Monitoring (6 tools): query time series data (CPU, network, disk, firewall, VPN, load balancer metrics), list alert policies and active violations, discover available metric types. Network monitoring, alert investigation, and resource health check workflows. |
 | **gcp-cloud-logging** | Cloud Logging (6 tools): search log entries (VPC flow logs, firewall logs, admin activity audit, data access audit, DNS queries), discover available logs, inspect log buckets and views. VPC flow log analysis, firewall log investigation, audit trail, and troubleshooting workflows. |
 
+### Datadog Observability Skills (4)
+
+| Skill | What It Does |
+|-------|-------------|
+| **datadog-logs** | Log search and analysis (4 tools): search logs with query syntax, time range, and filters; get log details; list log indexes; get pipeline configuration. Security event hunting, network log correlation, and syslog analysis workflows. |
+| **datadog-metrics** | Metric queries and dashboards (5 tools): execute metric queries with aggregations; list available metrics; get metric metadata; list and retrieve dashboards. Network performance monitoring, infrastructure health assessment, and capacity planning workflows. |
+| **datadog-incidents** | Incident management (4 tools): list incidents with filters; get incident details; create and update incidents (read-only by default). Incident investigation, network outage tracking, and post-incident review workflows. |
+| **datadog-apm** | APM trace analysis (4 tools): search traces with query syntax; get trace details; list services; get service performance summary. Latency analysis, error investigation, service health review, and root cause analysis workflows. |
+
+### PagerDuty Incident Management Skills (4)
+
+| Skill | What It Does |
+|-------|-------------|
+| **pagerduty-incidents** | Incident management (12 tools): list/get/create incidents, manage alerts, add notes and responders, find related and past incidents, identify outliers. Incident investigation, network outage response, and pattern analysis workflows. |
+| **pagerduty-oncall** | On-call management (9 tools): list current on-calls, manage schedules and overrides, review escalation policies. Shift handoff, vacation coverage, and escalation review workflows. |
+| **pagerduty-services** | Service catalog (4 tools): list/get/create/update services. Service catalog review, health assessment, and new service onboarding workflows. |
+| **pagerduty-orchestration** | Event orchestration (7 tools): manage event routing rules, global orchestration, and service-specific routing. Event routing review, rule management, and routing audit workflows. |
+
+### Splunk Log Analytics Skills (3)
+
+| Skill | What It Does |
+|-------|-------------|
+| **splunk-search** | SPL search execution (8 tools): run SPL queries, get search results, manage search jobs, export results. Security event hunting, network log correlation, and incident investigation workflows. |
+| **splunk-indexes** | Index management (6 tools): list indexes, get index details/stats, list sourcetypes. Index discovery before querying for efficient searches. |
+| **splunk-saved** | Saved searches and alerts (6 tools): list/get/run saved searches, manage alert history. Compliance reporting, scheduled search execution, and alert management workflows. |
+
+### HashiCorp Terraform Skills (3)
+
+| Skill | What It Does |
+|-------|-------------|
+| **terraform-registry** | Registry module/provider discovery (6 tools): search modules, get versions, search providers, get documentation. Module discovery before writing infrastructure code. |
+| **terraform-workspaces** | Workspace management (8 tools): list workspaces, get runs, view state, manage variables. Workspace review, run history analysis, and state inspection workflows. |
+| **terraform-operations** | Run operations (6 tools): create runs, get status/logs, cancel runs. Plan/apply workflow with ServiceNow CR gating for production changes. |
+
+### HashiCorp Vault Skills (3)
+
+| Skill | What It Does |
+|-------|-------------|
+| **vault-secrets** | Secrets management (8 tools): list/read secrets, list secret engines, get metadata. Secrets audit, credential rotation, and secure retrieval workflows. |
+| **vault-pki** | PKI certificates (6 tools): list certificates, get cert details, view CA chain, list roles. Certificate audit, expiration tracking, and PKI health workflows. |
+| **vault-mounts** | Auth and secrets mounts (6 tools): list auth methods, list secret engines, get mount config, list audit devices. Vault health audit and mount configuration review. |
+
+### Zscaler Zero Trust Skills (5)
+
+| Skill | What It Does |
+|-------|-------------|
+| **zscaler-zia** | ZIA security (15 tools): URL categories, security policies, firewall rules, SSL inspection, DLP engines. ZIA policy audit, web security review, and threat protection workflows. |
+| **zscaler-zpa** | ZPA private access (12 tools): application segments, server groups, access policies, posture profiles, connectors. ZPA audit, ZTNA configuration review, and connector health workflows. |
+| **zscaler-zdx** | ZDX experience (10 tools): devices, user experience scores, applications, network metrics, alerts. ZDX troubleshooting, performance analysis, and user experience workflows. |
+| **zscaler-identity** | Identity management (8 tools): users, groups, departments, IDP configuration. Identity audit, user provisioning review, and directory sync workflows. |
+| **zscaler-insights** | Analytics and reporting (8 tools): traffic insights, threat insights, bandwidth reports, audit logs. Security review, traffic analysis, and compliance reporting workflows. |
+
+### Cloudflare Edge Platform Skills (5)
+
+| Skill | What It Does |
+|-------|-------------|
+| **cloudflare-dns** | DNS management (8 tools): list zones, get zone details, list DNS records, get DNS analytics, check DNSSEC status. DNS audit, record management, and analytics workflows. |
+| **cloudflare-security** | WAF/DDoS security (10 tools): list firewall rules, get WAF packages, rate limits, DDoS analytics, IP access rules. Security audit, threat analysis, and protection workflows. |
+| **cloudflare-zerotrust** | Zero Trust access (8 tools): list Access applications, get policies, view Gateway logs, list tunnels, check device posture. Zero Trust audit, access review, and tunnel health workflows. |
+| **cloudflare-analytics** | Traffic analytics (6 tools): zone analytics, firewall events, origin analytics, cache analytics. Traffic analysis, performance review, and cache optimization workflows. |
+| **cloudflare-workers** | Edge compute (6 tools): list Workers, get logs, list KV namespaces, view Durable Objects. Workers inventory, log analysis, and edge compute review workflows. |
+
 ### Reference & Utility Skills (7)
 
 | Skill | Tool Backend | Purpose |
@@ -487,6 +819,7 @@ All MCP servers communicate via stdio (JSON-RPC 2.0) through `scripts/mcp-call.p
 | **drawio-diagram** | [@drawio/mcp](https://github.com/jgraph/drawio-mcp) (npx + [official skill-cli](https://github.com/jgraph/drawio-mcp/tree/main/skill-cli)) | Network topology diagrams — native `.drawio` files with CLI export (PNG/SVG/PDF with embedded XML), plus browser-based Mermaid/XML/CSV via MCP server. Color-coded by reconciliation status. |
 | **rfc-lookup** | [@mjpitz/mcp-rfc](https://github.com/mjpitz/mcp-rfc) (npx) | IETF RFC search, retrieval, and section extraction — BGP (4271), OSPF (2328), NTP (5905) |
 | **uml-diagram** | [UML MCP](https://github.com/antoinebou12/uml-mcp) (stdio) | 27+ UML/diagram types via Kroki — class, sequence, nwdiag, rackdiag, packetdiag, C4, Mermaid, D2, Graphviz, ERD, BPMN |
+| **blender-3d-viz** | [blender-mcp](https://github.com/ahujasid/blender-mcp) (uvx) | 3D network topology visualization — draw CDP/LLDP topologies in Blender, color by device type (router=blue, switch=green, firewall=red), add labels, export PNG/video |
 
 ### Slack Integration Skills (4)
 
@@ -497,11 +830,245 @@ All MCP servers communicate via stdio (JSON-RPC 2.0) through `scripts/mcp-call.p
 | **slack-incident-workflow** | Full incident lifecycle in Slack: declaration, triage, automated investigation, status updates, resolution, post-incident review |
 | **slack-user-context** | User-aware interactions: DND-respecting escalation, timezone-aware scheduling, role-based response depth, shift handoff summaries |
 
+### Cisco WebEx Integration Skills (5)
+
+| Skill | Purpose |
+|-------|---------|
+| **webex-network-alerts** | Severity-formatted alert delivery to WebEx spaces using Adaptive Cards (attention/warning/good styles), markdown fallback, fleet summary ColumnSets |
+| **webex-report-delivery** | Rich WebEx formatting for health checks, security audits, topology maps, reconciliation results — Adaptive Cards for structured data, markdown for narrative |
+| **webex-incident-workflow** | Full incident lifecycle in WebEx: Adaptive Card declaration with interactive IC claim buttons, dedicated incident spaces via Rooms API, threaded investigation, resolution cards |
+| **webex-user-context** | User-aware interactions: People API availability checks, activity-based escalation routing, timezone-aware scheduling, role-based response depth |
+| **webex-voice-interface** | Voice responses for WebEx: OpenClaw transcribes voice clips, NetClaw processes with full skill set, edge-tts generates MP3, uploaded to WebEx space alongside text |
+
+> WebEx setup is documented in the dedicated **[Cisco WebEx Integration](#cisco-webex-integration)** section below.
+
+---
+
+## Cisco WebEx Integration
+
+> **Important:** WebEx is **not** a built-in OpenClaw channel. Unlike Slack (which ships as a first-party OpenClaw provider using WebSocket), WebEx is an **add-on** that uses the community [`@jimiford/webex`](https://www.npmjs.com/package/@jimiford/webex) OpenClaw channel plugin. This plugin delivers inbound messages via **webhooks** — WebEx POSTs to a public HTTPS endpoint whenever someone @mentions your bot. That means you need a publicly reachable URL (ngrok for local development, a real domain for production).
+
+NetClaw's WebEx support is **bidirectional**:
+
+| Direction | How It Works |
+|-----------|-------------|
+| **Outbound** (NetClaw → WebEx) | Direct REST API calls to `https://webexapis.com/v1/messages` using the bot token. Supports plain text, markdown, Adaptive Cards, file attachments, threaded replies. |
+| **Inbound** (WebEx → NetClaw) | The `@jimiford/webex` plugin registers a webhook with WebEx. When a user @mentions the bot, WebEx POSTs to your webhook URL, the plugin routes it to OpenClaw, and the agent responds. |
+
+### Prerequisites
+
+- A **Cisco WebEx account** (free or paid)
+- **Node.js 18+** and **OpenClaw 2026.3.x** (already installed if you ran `install.sh`)
+- **ngrok** (free tier works) — only required for local/development setups where the gateway is not publicly reachable
+
+### Step 1: Create a WebEx Bot
+
+1. Go to [developer.webex.com/my-apps](https://developer.webex.com/my-apps)
+2. Click **Create a New App** → **Create a Bot**
+3. Fill in:
+   - **Bot Name:** `NetClaw` (or whatever you prefer)
+   - **Bot Username:** e.g. `YourOrg_NetClaw` (must be unique)
+   - **Icon:** upload one or use a default
+   - **Description:** `CCIE-level AI network engineering agent`
+4. Click **Add Bot**
+5. **Copy the Bot Access Token** — this is shown only once (you can regenerate it later)
+   - The token looks like: `ZTA2MmM2MjMt...` (long base64 string)
+   - Bot tokens are **long-lived** and do not expire
+
+### Step 2: Add the Bot to a WebEx Space
+
+1. In the WebEx app, create or open a space (e.g., "NetClaw Alerts")
+2. Click the space name → **People** → **Add people**
+3. Search for your bot by its username (e.g., `YourOrg_NetClaw@webex.bot`) and add it
+4. **Copy the Room ID** — you'll need this for environment variables. Get it from:
+   - The [WebEx API docs](https://developer.webex.com/docs/api/v1/rooms/list-rooms) → **Try It** → find your space in the results
+   - Or use: `curl -H "Authorization: Bearer YOUR_TOKEN" https://webexapis.com/v1/rooms`
+
+### Step 3: Set Environment Variables
+
+You can set these either by running `./scripts/setup.sh` (interactive wizard) or by manually editing `~/.openclaw/.env`:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `WEBEX_BOT_TOKEN` | Yes | Bot Access Token from Step 1 |
+| `WEBEX_ALERTS_ROOM_ID` | Optional | Default space for CRITICAL/HIGH alert delivery |
+| `WEBEX_REPORTS_ROOM_ID` | Optional | Default space for scheduled report delivery |
+| `WEBEX_INCIDENTS_ROOM_ID` | Optional | Default space for incident declarations |
+| `WEBEX_WEBHOOK_URL` | For inbound | Your public webhook URL (see Step 4) |
+| `WEBEX_WEBHOOK_SECRET` | Optional | HMAC-SHA1 secret for webhook signature verification |
+
+**Option A — Run the setup wizard:**
+```bash
+./scripts/setup.sh
+```
+The wizard prompts for the bot token, room IDs, webhook URL, and webhook secret.
+
+**Option B — Edit `.env` directly:**
+```bash
+# Add to ~/.openclaw/.env
+WEBEX_BOT_TOKEN=ZTA2MmM2MjMtMTM3Ny00ZTA0LTgz...
+WEBEX_ALERTS_ROOM_ID=Y2lzY29zcGFyazovL3Vybjp...
+WEBEX_REPORTS_ROOM_ID=Y2lzY29zcGFyazovL3Vybjp...
+WEBEX_INCIDENTS_ROOM_ID=Y2lzY29zcGFyazovL3Vybjp...
+```
+
+> **Outbound-only stops here.** If you only need NetClaw to *send* alerts and reports to WebEx (not receive @mentions), you're done. The WebEx skills will use the bot token and room IDs to post messages via the REST API. Skip to Step 7 to test.
+
+### Step 4: Set Up ngrok (Required for Inbound)
+
+WebEx delivers inbound messages via webhooks — it POSTs to a URL you provide. Your OpenClaw gateway listens on `localhost:18789`, which isn't publicly reachable. [ngrok](https://ngrok.com) creates a secure tunnel from a public HTTPS URL to your local gateway.
+
+1. **Install ngrok** (if not already installed):
+   ```bash
+   # macOS
+   brew install ngrok
+   # Linux
+   curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok-v3-stable-linux-amd64.tgz | sudo tar xz -C /usr/local/bin
+   # Or visit https://ngrok.com/download
+   ```
+
+2. **Sign up** at [ngrok.com](https://ngrok.com) (free tier is sufficient) and set your auth token:
+   ```bash
+   ngrok config add-authtoken YOUR_NGROK_AUTH_TOKEN
+   ```
+
+3. **Start the tunnel:**
+   ```bash
+   ngrok http 18789
+   ```
+
+4. **Copy the HTTPS URL** from the ngrok output:
+   ```
+   Forwarding  https://a1b2-203-0-113-42.ngrok-free.app -> http://localhost:18789
+   ```
+
+5. Your webhook endpoint is:
+   ```
+   https://a1b2-203-0-113-42.ngrok-free.app/webhooks/webex/default
+   ```
+
+> **ngrok free tier caveat:** The URL changes every time you restart ngrok. After restarting, update the `webhookUrl` in `openclaw.json` and restart the gateway. For production, use a stable HTTPS domain or an ngrok paid plan with a fixed subdomain.
+
+### Step 5: Install the WebEx Channel Plugin
+
+The `@jimiford/webex` plugin adds WebEx as a bidirectional channel to OpenClaw (similar to how Slack is built in):
+
+```bash
+openclaw plugin install @jimiford/webex
+```
+
+Then configure `~/.openclaw/openclaw.json`. Add these sections (merge with your existing config):
+
+```json
+{
+  "channels": {
+    "webex": {
+      "enabled": true,
+      "token": "YOUR_BOT_TOKEN",
+      "webhookUrl": "https://a1b2-203-0-113-42.ngrok-free.app/webhooks/webex/default",
+      "dmPolicy": "allow"
+    }
+  },
+  "plugins": {
+    "allow": ["webex"],
+    "entries": {
+      "webex": {
+        "enabled": true,
+        "config": {
+          "token": "YOUR_BOT_TOKEN",
+          "webhookUrl": "https://a1b2-203-0-113-42.ngrok-free.app/webhooks/webex/default",
+          "dmPolicy": "allow"
+        }
+      }
+    }
+  }
+}
+```
+
+Replace `YOUR_BOT_TOKEN` with your actual bot token and the ngrok URL with your actual URL.
+
+### Step 6: Enable Cross-Provider Messaging (Optional)
+
+By default, OpenClaw enforces **provider isolation** — a session started from WebEx cannot send messages to Slack, and vice versa. If you want NetClaw to relay messages between channels (e.g., ask NetClaw in WebEx to post an alert to Slack), add this to `~/.openclaw/openclaw.json`:
+
+```json
+{
+  "tools": {
+    "message": {
+      "crossContext": {
+        "allowWithinProvider": true,
+        "allowAcrossProviders": true,
+        "marker": {
+          "enabled": true,
+          "prefix": "[from {channel}]"
+        }
+      }
+    }
+  }
+}
+```
+
+Cross-provider messages are tagged with a `[from webex]` or `[from slack]` prefix so recipients know the origin.
+
+### Step 7: Start and Test
+
+1. **Make sure ngrok is running** (if using inbound):
+   ```bash
+   ngrok http 18789
+   ```
+
+2. **Start the gateway:**
+   ```bash
+   openclaw gateway run
+   ```
+
+3. **Verify the WebEx provider starts.** You should see these lines in the gateway log:
+   ```
+   [webex] [default] starting Webex provider (webhook mode)
+   [webex] [default] webhooks registered
+   [webex] [default] HTTP webhook handler registered at /webhooks/webex/default
+   [webex] [default] Webex provider running (webhook mode — waiting for messages)
+   ```
+   If you see `auto-restart attempt`, something is wrong — check your token and webhook URL.
+
+4. **Test outbound** — from Slack (or the web chat), ask NetClaw to send a message to WebEx:
+   ```
+   Send a hello world message to the WebEx alerts space
+   ```
+
+5. **Test inbound** — in WebEx, @mention the bot:
+   ```
+   @NetClaw what skills and MCPs do you have?
+   ```
+   The bot should respond directly in the WebEx space.
+
+### WebEx Skills Reference
+
+WebEx skills use the [WebEx REST API](https://developer.webex.com/docs/api/getting-started) with [Adaptive Cards v1.3](https://developer.webex.com/messaging/docs/buttons-and-cards) for rich interactive formatting, the People API for user-aware routing, and threaded messages via `parentId` for investigation workflows.
+
+| API Endpoint | Used For |
+|-------------|----------|
+| `POST /v1/messages` | Send text, markdown, and Adaptive Cards to spaces |
+| `GET /v1/rooms` | List and create spaces for incidents |
+| `GET /v1/people/me` | Bot identity and display name |
+| `GET /v1/memberships` | Check who is in a space |
+| `POST /v1/webhooks` | Register webhook targets (handled automatically by the plugin) |
+
+### Troubleshooting
+
+| Problem | Cause | Fix |
+|---------|-------|-----|
+| No `[webex]` line in gateway log | Plugin not installed or not enabled | Run `openclaw plugin install @jimiford/webex` and check `openclaw.json` has `plugins.allow: ["webex"]` |
+| `auto-restart attempt` loop | Provider starts but immediately exits | Check bot token is valid; check ngrok is running and URL matches config |
+| @mention in WebEx gets no response | Webhook not reaching gateway | Verify ngrok is running, URL in `openclaw.json` ends with `/webhooks/webex/default`, and WebEx webhook is registered (check at developer.webex.com → Webhooks) |
+| `Cross-context messaging denied` | Provider isolation blocking cross-channel sends | Add `tools.message.crossContext.allowAcrossProviders: true` to `openclaw.json` |
+| `404` on webhook POST | URL path mismatch | The gateway listens at `/webhooks/webex/default` (not `/webhooks/webex`) — make sure the `/default` suffix is in your webhook URL |
+
 ---
 
 ## Cloud
 
-NetClaw extends into public cloud infrastructure. Each cloud provider gets its own set of MCP servers and skills, all driven from the same Slack/chat interface as on-prem operations.
+NetClaw extends into public cloud infrastructure. Each cloud provider gets its own set of MCP servers and skills, all driven from the same Slack/WebEx/chat interface as on-prem operations.
 
 ### AWS
 
@@ -1397,6 +1964,7 @@ netclaw/
 │       ├── ise-incident-response/        # Endpoint investigation & quarantine
 │       ├── servicenow-change-workflow/   # Full ITSM change lifecycle
 │       ├── gait-session-tracking/        # Mandatory audit trail
+│       ├── humanrail-escalation/         # Human-in-the-loop gates (7 tools, streamable HTTP)
 │       ├── f5-health-check/              # F5 virtual server & pool health
 │       ├── f5-config-mgmt/              # F5 object lifecycle management
 │       ├── f5-troubleshoot/             # F5 troubleshooting workflows
@@ -1450,7 +2018,12 @@ netclaw/
 │       ├── slack-network-alerts/         # Slack alert delivery
 │       ├── slack-report-delivery/        # Slack report formatting
 │       ├── slack-incident-workflow/      # Slack incident lifecycle
-│       └── slack-user-context/           # Slack user-aware routing
+│       ├── slack-user-context/           # Slack user-aware routing
+│       ├── webex-network-alerts/        # WebEx alert delivery (Adaptive Cards)
+│       ├── webex-report-delivery/       # WebEx report formatting
+│       ├── webex-incident-workflow/     # WebEx incident lifecycle
+│       ├── webex-user-context/          # WebEx user-aware routing
+│       └── webex-voice-interface/       # WebEx voice responses
 ├── testbed/
 │   └── testbed.yaml                      # pyATS testbed (your network devices)
 ├── config/
@@ -1564,6 +2137,7 @@ netclaw/
 40. **Configures Kubeshark MCP** — Checks for `kubectl`; Kubeshark MCP is a remote HTTP endpoint running inside a Kubernetes cluster (6 tools: traffic capture, pcap export, snapshots, KFL filtering, L4 flow stats, TLS decryption). Requires Kubeshark deployed via Helm with `mcp.enabled=true`.
 41. **Installs Protocol MCP** — `pip3 install -r requirements.txt` (scapy, networkx, mcp, fastmcp) for live BGP/OSPF/GRE control-plane participation (10 tools: peer with routers, inject/withdraw routes, query RIB/LSDB, adjust metrics). Protocol speakers from WontYouBeMyNeighbour.
 42. **Protocol Peering Wizard** — Optional interactive configuration: router ID, local AS, BGP peer IP/AS, OSPF areas, GRE tunnels, lab mode. Writes protocol environment variables to `~/.openclaw/.env`. Optionally creates GRE tunnel (requires sudo).
+42b. **Installs HumanRail MCP** — `git clone` + `pip3 install "mcp[cli]>=1.0.0" httpx` for human-in-the-loop escalation (7 tools: create_task, get_task, wait_for_task, cancel_task, list_tasks, get_usage, health_check). Streamable HTTP transport on port 8100. Requires `HUMANRAIL_API_KEY` — free API at [humanrail.dev](https://humanrail.dev). Mobile app coming soon; web app available now for engineer sign-up.
 43. **Deploys skills + workspace files** — Copies 82 skills and 6 MD files to `~/.openclaw/workspace/`
 44. **Verifies installation** — Checks all MCP server scripts + core scripts exist
 45. **Prints summary** — Lists all 37 MCP servers by category and all 82 skills by domain
@@ -1931,7 +2505,7 @@ See `examples/` for detailed workflow walkthroughs.
 
 ---
 
-## Missions
+## Missions for reference
 
 | Mission | Status | Summary |
 |---|---|---|

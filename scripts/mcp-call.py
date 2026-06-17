@@ -11,6 +11,7 @@ Examples:
 """
 
 import json
+import os
 import select
 import shlex
 import subprocess
@@ -24,13 +25,74 @@ def send(proc, msg):
     proc.stdin.flush()
 
 
-def recv(proc, timeout=30):
-    """Read a JSON-RPC response from the MCP server via stdout."""
-    if select.select([proc.stdout], [], [], timeout)[0]:
-        line = proc.stdout.readline().decode().strip()
-        if line:
-            return json.loads(line)
+def recv(proc, timeout=30, expected_id=None):
+    """Read JSON-RPC messages from stdout and return the matching response.
+
+    Some MCP servers emit startup logs or notifications before the response we
+    care about. This function tolerates non-JSON lines and can optionally wait
+    for a specific JSON-RPC id.
+    """
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+        remaining = max(0, deadline - time.monotonic())
+        if not select.select([proc.stdout], [], [], remaining)[0]:
+            break
+
+        raw = proc.stdout.readline()
+        if not raw:
+            continue
+
+        line = raw.decode(errors="replace").strip()
+        if not line:
+            continue
+
+        try:
+            msg = json.loads(line)
+        except json.JSONDecodeError:
+            # Ignore non-JSON log lines on stdout.
+            continue
+
+        if expected_id is not None and msg.get("id") != expected_id:
+            continue
+
+        return msg
+
     return None
+
+
+def split_server_command(server_cmd):
+    """Split a command string and extract leading KEY=VALUE environment assignments."""
+    env = os.environ.copy()
+    parts = shlex.split(server_cmd)
+    cmd_parts = []
+
+    for part in parts:
+        if not cmd_parts and "=" in part and not part.startswith("="):
+            key, value = part.split("=", 1)
+            if key and all(ch.isalnum() or ch == "_" for ch in key):
+                env[key] = value
+                continue
+        cmd_parts.append(part)
+
+    if not cmd_parts:
+        raise ValueError(f"Invalid server command: {server_cmd}")
+
+    return cmd_parts, env
+
+
+def read_stderr(proc):
+    """Best-effort read of currently available stderr output."""
+    chunks = []
+    while True:
+        ready, _, _ = select.select([proc.stderr], [], [], 0)
+        if not ready:
+            break
+        data = proc.stderr.readline()
+        if not data:
+            break
+        chunks.append(data.decode(errors="replace"))
+    return "".join(chunks).strip()
 
 
 def main():
@@ -40,14 +102,23 @@ def main():
 
     server_cmd = sys.argv[1]
     tool_name = sys.argv[2]
-    args_json = json.loads(sys.argv[3]) if len(sys.argv) > 3 else {}
 
-    cmd_parts = shlex.split(server_cmd)
+    if len(sys.argv) > 3:
+        try:
+            args_json = json.loads(sys.argv[3])
+        except json.JSONDecodeError as exc:
+            print(f"Error: arguments-json must be valid JSON ({exc})", file=sys.stderr)
+            sys.exit(1)
+    else:
+        args_json = {}
+
+    cmd_parts, env = split_server_command(server_cmd)
     proc = subprocess.Popen(
         cmd_parts,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        env=env,
     )
 
     try:
@@ -62,9 +133,13 @@ def main():
                 "clientInfo": {"name": "netclaw", "version": "1.0"},
             },
         })
-        init_resp = recv(proc, timeout=10)
+        init_resp = recv(proc, timeout=10, expected_id=0)
         if not init_resp:
-            print("Error: No response to initialize", file=sys.stderr)
+            stderr_output = read_stderr(proc)
+            if stderr_output:
+                print(f"Error: No response to initialize\n{stderr_output}", file=sys.stderr)
+            else:
+                print("Error: No response to initialize", file=sys.stderr)
             sys.exit(1)
 
         # Step 2: Initialized notification
@@ -78,11 +153,15 @@ def main():
             "method": "tools/call",
             "params": {"name": tool_name, "arguments": args_json},
         })
-        resp = recv(proc, timeout=30)
+        resp = recv(proc, timeout=30, expected_id=1)
         if resp:
             print(json.dumps(resp.get("result", resp), indent=2))
         else:
-            print("Error: No response to tool call", file=sys.stderr)
+            stderr_output = read_stderr(proc)
+            if stderr_output:
+                print(f"Error: No response to tool call\n{stderr_output}", file=sys.stderr)
+            else:
+                print("Error: No response to tool call", file=sys.stderr)
             sys.exit(1)
     finally:
         proc.terminate()

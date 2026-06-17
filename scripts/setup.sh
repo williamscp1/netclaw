@@ -5,7 +5,7 @@
 # This handles the NetClaw-specific stuff that openclaw onboard doesn't:
 # - Network platform credentials (NetBox, ServiceNow, ACI, ISE, F5, CatC, NVD)
 # - pyATS testbed editing
-# - Slack channel mapping
+# - Slack channel mapping / WebEx space mapping
 # - USER.md personalization
 #
 # AI provider, gateway, and channel connections are handled by:
@@ -104,7 +104,7 @@ echo ""
 echo -e "${BOLD}    NetClaw Platform Setup${NC}"
 echo ""
 echo -e "  Configure your network platform credentials."
-echo -e "  AI provider and Slack were set up by ${BOLD}openclaw onboard${NC}."
+echo -e "  AI provider and channels (Slack, WebEx, etc.) were set up by ${BOLD}openclaw onboard${NC}."
 echo -e "  Re-run anytime: ${BOLD}./scripts/setup.sh${NC}"
 echo ""
 echo -e "  ${DIM}All credentials are stored in ~/.openclaw/.env (never committed to git)${NC}"
@@ -180,6 +180,21 @@ if yesno "Do you have an OpsMill Infrahub instance? (schema-driven infrastructur
     ok "OpsMill Infrahub configured"
 else
     skip "OpsMill Infrahub"
+fi
+echo ""
+
+# --- Infoblox DDI ---
+if yesno "Do you have an Infoblox DDI platform? (DNS, DHCP, IPAM)"; then
+    echo ""
+    echo -e "  Infoblox MCP covers DNS records, DHCP scopes and leases, and IPAM utilization."
+    echo ""
+    prompt INFOBLOX_URL_VAL "Infoblox URL (https://infoblox.example.com)" ""
+    prompt_secret INFOBLOX_KEY "Infoblox API Key / Token"
+    [ -n "$INFOBLOX_URL_VAL" ] && set_env "INFOBLOX_URL" "$INFOBLOX_URL_VAL"
+    [ -n "$INFOBLOX_KEY" ] && set_env "INFOBLOX_API_KEY" "$INFOBLOX_KEY"
+    ok "Infoblox DDI configured"
+else
+    skip "Infoblox DDI"
 fi
 echo ""
 
@@ -507,6 +522,58 @@ if yesno "Do you have a Cisco Secure Firewall Management Center (FMC)?"; then
 else
     skip "Cisco FMC"
 fi
+echo ""
+
+# --- Palo Alto Panorama ---
+if yesno "Do you have a Palo Alto Panorama instance?"; then
+    echo ""
+    echo -e "  Panorama MCP covers device groups, templates, security policy, NAT, and commit validation."
+    echo ""
+    prompt PANORAMA_HOST "Panorama Hostname (panorama.example.com)" ""
+    prompt_secret PANORAMA_KEY "Panorama API Key"
+    [ -n "$PANORAMA_HOST" ] && set_env "PANOS_HOSTNAME" "$PANORAMA_HOST"
+    [ -n "$PANORAMA_KEY" ] && set_env "PANOS_API_KEY" "$PANORAMA_KEY"
+    ok "Palo Alto Panorama configured"
+else
+    skip "Palo Alto Panorama"
+fi
+echo ""
+
+# --- FortiManager ---
+if yesno "Do you have a FortiManager instance?"; then
+    echo ""
+    echo -e "  FortiManager MCP covers ADOM inventory, policy packages, object search, and install preview."
+    echo ""
+    prompt FORTIMANAGER_HOST_VAL "FortiManager Hostname (fortimanager.example.com)" ""
+    prompt_secret FORTIMANAGER_TOKEN_VAL "FortiManager API Token"
+    [ -n "$FORTIMANAGER_HOST_VAL" ] && set_env "FORTIMANAGER_HOST" "$FORTIMANAGER_HOST_VAL"
+    [ -n "$FORTIMANAGER_TOKEN_VAL" ] && set_env "FORTIMANAGER_API_TOKEN" "$FORTIMANAGER_TOKEN_VAL"
+    ok "FortiManager configured"
+else
+    skip "FortiManager"
+fi
+echo ""
+
+# --- Ansible Automation Platform (AAP) ---
+if yesno "Do you have a Red Hat Ansible Automation Platform instance?"; then
+    echo ""
+    echo -e "  AAP MCP provides 4 servers: Controller (45 tools), EDA (12 tools), ansible-lint (9 tools), Red Hat docs."
+    echo -e "  Get your API token from: ${BOLD}AAP → Settings → Tokens → Create (Write scope)${NC}"
+    echo ""
+    prompt AAP_URL_VAL "AAP Controller API URL (https://aap.example.com/api/controller/v2)" ""
+    prompt_secret AAP_TOKEN_VAL "AAP API Token"
+    prompt EDA_URL_VAL "EDA API URL (https://aap.example.com/api/eda/v1)" ""
+    prompt_secret EDA_TOKEN_VAL "EDA API Token (or same as AAP token)"
+    [ -n "$AAP_URL_VAL" ] && set_env "AAP_URL" "$AAP_URL_VAL"
+    [ -n "$AAP_TOKEN_VAL" ] && set_env "AAP_TOKEN" "$AAP_TOKEN_VAL"
+    [ -n "$EDA_URL_VAL" ] && set_env "EDA_URL" "$EDA_URL_VAL"
+    [ -n "$EDA_TOKEN_VAL" ] && set_env "EDA_TOKEN" "$EDA_TOKEN_VAL"
+    ok "Ansible Automation Platform configured"
+else
+    skip "Ansible Automation Platform"
+fi
+echo ""
+
 # --- Cisco ThousandEyes ---
 if yesno "Do you have a Cisco ThousandEyes account? (network monitoring, path visualization, BGP)"; then
     echo ""
@@ -571,6 +638,58 @@ else
 fi
 echo ""
 
+# --- HumanRail ---
+if yesno "Do you have a HumanRail account? (human-in-the-loop escalation for AI agents — free while in beta)"; then
+    echo ""
+    echo -e "  HumanRail routes agent decisions to human engineers when confidence is low,"
+    echo -e "  a destructive operation needs sign-off, or an ambiguous ticket needs triage."
+    echo -e "  Workers are paid via Lightning Network. Free while building the network."
+    echo -e "  Get your API key at: ${BOLD}https://humanrail.dev${NC}"
+    echo ""
+    prompt_secret HR_KEY "HumanRail API Key (ek_live_... or ek_test_...)"
+    prompt HR_URL "HumanRail MCP URL" "http://127.0.0.1:8100/mcp"
+    [ -n "$HR_KEY" ] && set_env "HUMANRAIL_API_KEY" "$HR_KEY"
+    [ -n "$HR_URL" ] && set_env "HUMANRAIL_MCP_URL" "$HR_URL"
+    ok "HumanRail configured"
+else
+    skip "HumanRail"
+fi
+echo ""
+
+# --- Cisco WebEx ---
+if yesno "Do you have a Cisco WebEx account? (alerts, incidents, reports via WebEx spaces)"; then
+    echo ""
+    echo -e "  WebEx skills let NetClaw post alerts, manage incidents, and deliver reports to WebEx spaces."
+    echo -e "  Create a Bot at: ${BOLD}https://developer.webex.com/my-apps${NC} → Create a New App → Bot"
+    echo -e "  The bot token is long-lived (does not expire)."
+    echo ""
+    prompt_secret WEBEX_TOKEN "WebEx Bot Access Token"
+    [ -n "$WEBEX_TOKEN" ] && set_env "WEBEX_BOT_TOKEN" "$WEBEX_TOKEN"
+    echo ""
+    echo -e "  ${DIM}Optional: Pre-configure default WebEx spaces for alert routing.${NC}"
+    echo -e "  ${DIM}Get Room IDs from: WebEx Developer API → Rooms → List Rooms${NC}"
+    echo ""
+    prompt WEBEX_ALERTS "Alerts Space Room ID (for CRITICAL/HIGH alerts)" ""
+    prompt WEBEX_REPORTS "Reports Space Room ID (for scheduled reports)" ""
+    [ -n "$WEBEX_ALERTS" ] && set_env "WEBEX_ALERTS_ROOM_ID" "$WEBEX_ALERTS"
+    [ -n "$WEBEX_REPORTS" ] && set_env "WEBEX_REPORTS_ROOM_ID" "$WEBEX_REPORTS"
+    echo ""
+    echo -e "  ${BOLD}Bidirectional WebEx (inbound @mentions):${NC}"
+    echo -e "  To receive messages FROM WebEx, you need a public webhook URL."
+    echo -e "  Development: ${BOLD}ngrok http 18789${NC} → copy the https URL"
+    echo -e "  Production:  your public HTTPS domain"
+    echo -e "  The webhook path is: {base_url}/webhooks/webex/default"
+    echo ""
+    prompt WEBEX_WEBHOOK "Webhook URL (e.g. https://abc123.ngrok-free.app/webhooks/webex/default)" ""
+    [ -n "$WEBEX_WEBHOOK" ] && set_env "WEBEX_WEBHOOK_URL" "$WEBEX_WEBHOOK"
+    prompt WEBEX_SECRET "Webhook Secret (optional, for HMAC signature verification)" ""
+    [ -n "$WEBEX_SECRET" ] && set_env "WEBEX_WEBHOOK_SECRET" "$WEBEX_SECRET"
+    ok "Cisco WebEx configured (outbound + inbound)"
+else
+    skip "Cisco WebEx"
+fi
+echo ""
+
 # ═══════════════════════════════════════════
 # Step 3: Your Identity
 # ═══════════════════════════════════════════
@@ -621,6 +740,7 @@ echo "  What's configured:"
 grep -q "^NETBOX_URL=" "$OPENCLAW_ENV" 2>/dev/null && ok "NetBox" || skip "NetBox"
 grep -q "^NAUTOBOT_URL=" "$OPENCLAW_ENV" 2>/dev/null && ok "Nautobot" || skip "Nautobot"
 grep -q "^INFRAHUB_ADDRESS=" "$OPENCLAW_ENV" 2>/dev/null && ok "OpsMill Infrahub" || skip "OpsMill Infrahub"
+grep -q "^INFOBLOX_API_KEY=" "$OPENCLAW_ENV" 2>/dev/null && ok "Infoblox DDI" || skip "Infoblox DDI"
 grep -q "^ITENTIAL_MCP_PLATFORM_HOST=" "$OPENCLAW_ENV" 2>/dev/null && ok "Itential IAP" || skip "Itential IAP"
 grep -q "^JUNOS_DEVICES_FILE=" "$OPENCLAW_ENV" 2>/dev/null && ok "Juniper JunOS" || skip "Juniper JunOS"
 grep -q "^CVP=" "$OPENCLAW_ENV" 2>/dev/null && ok "Arista CloudVision" || skip "Arista CloudVision"
@@ -638,6 +758,9 @@ grep -q "^AWS_ACCESS_KEY_ID=" "$OPENCLAW_ENV" 2>/dev/null && ok "AWS Cloud" || s
 grep -q "^GCP_PROJECT_ID=" "$OPENCLAW_ENV" 2>/dev/null && ok "Google Cloud" || skip "Google Cloud"
 grep -q "^MERAKI_API_KEY=" "$OPENCLAW_ENV" 2>/dev/null && ok "Cisco Meraki" || skip "Cisco Meraki"
 grep -q "^FMC_BASE_URL=" "$OPENCLAW_ENV" 2>/dev/null && ok "Cisco FMC" || skip "Cisco FMC"
+grep -q "^PANOS_API_KEY=" "$OPENCLAW_ENV" 2>/dev/null && ok "Palo Alto Panorama" || skip "Palo Alto Panorama"
+grep -q "^FORTIMANAGER_API_TOKEN=" "$OPENCLAW_ENV" 2>/dev/null && ok "FortiManager" || skip "FortiManager"
+grep -q "^AAP_TOKEN=" "$OPENCLAW_ENV" 2>/dev/null && ok "Ansible Automation Platform" || skip "Ansible Automation Platform"
 grep -q "^TE_TOKEN=" "$OPENCLAW_ENV" 2>/dev/null && ok "Cisco ThousandEyes" || skip "Cisco ThousandEyes"
 grep -q "^RADKIT_IDENTITY=" "$OPENCLAW_ENV" 2>/dev/null && ok "Cisco RADKit" || skip "Cisco RADKit"
 [ -d "$NETCLAW_DIR/mcp-servers/uml-mcp" ] && ok "UML Diagrams (Kroki — no credentials required)" || skip "UML Diagrams"
@@ -647,6 +770,8 @@ grep -q "^GRAFANA_URL=" "$OPENCLAW_ENV" 2>/dev/null && ok "Grafana" || skip "Gra
 grep -q "^PROMETHEUS_URL=" "$OPENCLAW_ENV" 2>/dev/null && ok "Prometheus" || skip "Prometheus"
 grep -q "^KUBESHARK_MCP_URL=" "$OPENCLAW_ENV" 2>/dev/null && ok "Kubeshark" || skip "Kubeshark"
 grep -q "^NETCLAW_ROUTER_ID=" "$OPENCLAW_ENV" 2>/dev/null && ok "Protocol Participation (BGP/OSPF/GRE)" || skip "Protocol Participation"
+grep -q "^HUMANRAIL_API_KEY=" "$OPENCLAW_ENV" 2>/dev/null && ok "HumanRail (human-in-the-loop escalation)" || skip "HumanRail"
+grep -q "^WEBEX_BOT_TOKEN=" "$OPENCLAW_ENV" 2>/dev/null && ok "Cisco WebEx" || skip "Cisco WebEx"
 
 echo ""
 echo -e "  ${BOLD}Ready to go:${NC}"

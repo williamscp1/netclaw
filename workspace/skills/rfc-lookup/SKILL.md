@@ -1,14 +1,13 @@
 ---
 name: rfc-lookup
-description: "Search and retrieve IETF RFC documents - lookup by number, search by keyword, extract sections"
+description: "Search and retrieve IETF RFC documents - lookup by number, search by keyword, extract sections. Use when looking up an RFC, checking protocol specifications, verifying standards compliance, or researching how a protocol should behave per the spec."
+license: Apache-2.0
 user-invocable: true
 metadata:
   { "openclaw": { "requires": { "bins": ["npx"] } } }
 ---
 
 # IETF RFC Lookup
-
-You can search and retrieve RFC documents using the RFC MCP server.
 
 ## How to Use
 

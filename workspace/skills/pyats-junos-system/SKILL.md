@@ -1,14 +1,13 @@
 ---
 name: pyats-junos-system
-description: "JunOS system operations via pyATS — chassis health, hardware inventory, system info, NTP, SNMP, files/logs, firewall counters, DDoS protection, services accounting"
+description: "JunOS system operations via pyATS — chassis health, hardware inventory, system info, NTP, SNMP, files/logs, firewall counters, DDoS protection, services accounting. Use when checking Juniper chassis alarms, auditing hardware inventory, reviewing system uptime, or inspecting JunOS firewall counters."
+license: Apache-2.0
 user-invocable: true
 metadata:
   { "openclaw": { "requires": { "bins": ["python3"], "env": ["PYATS_TESTBED_PATH"] } } }
 ---
 
 # JunOS System Operations via pyATS
-
-Inspect Juniper device chassis health, hardware inventory, system state, NTP, SNMP, firewall counters, DDoS protection, and services accounting using pyATS `pyats_run_show_command`. This complements the JunOS MCP server (PyEZ/NETCONF) with SSH/CLI-based operational commands and Genie parser support.
 
 ## Testbed Requirements
 

@@ -38,7 +38,7 @@ clone_or_pull() {
 
 NETCLAW_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MCP_DIR="$NETCLAW_DIR/mcp-servers"
-TOTAL_STEPS=45
+TOTAL_STEPS=55
 
 echo "========================================="
 echo "  NetClaw - CCIE Network Agent"
@@ -120,7 +120,7 @@ log_step "3/$TOTAL_STEPS Running OpenClaw onboard..."
 echo ""
 echo "  This is OpenClaw's built-in setup wizard."
 echo "  You'll pick your AI provider, set up the gateway, and connect"
-echo "  channels like Slack, Discord, Telegram, etc."
+echo "  channels like Slack, Discord, Telegram, WebEx, etc."
 echo ""
 
 if command -v openclaw &> /dev/null; then
@@ -635,6 +635,65 @@ else
     log_warn "Docker not found — GitHub MCP server requires Docker"
     log_info "Install Docker, then run: docker pull $GITHUB_MCP_IMAGE"
 fi
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 24b: GitLab MCP Server
+# ═══════════════════════════════════════════
+
+log_step "24b/$TOTAL_STEPS Configuring GitLab MCP Server..."
+echo "  Source: https://github.com/zereight/mcp-gitlab"
+echo "  Auth: GitLab Personal Access Token (PAT)"
+echo "  Transport: stdio via npx @zereight/mcp-gitlab"
+
+# GitLab MCP runs via npx — requires Node.js 18+
+if command -v npx &> /dev/null; then
+    log_info "npx found — GitLab MCP server will auto-install on first use via: npx -y @zereight/mcp-gitlab"
+else
+    log_warn "npx not found — GitLab MCP server requires Node.js 18+ with npx"
+    log_info "Install Node.js 18+: https://nodejs.org/"
+fi
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 24c: Jenkins MCP Server
+# ═══════════════════════════════════════════
+
+log_step "24c/$TOTAL_STEPS Configuring Jenkins MCP Server..."
+echo "  Source: https://plugins.jenkins.io/mcp-server/"
+echo "  Auth: HTTP Basic Auth (Jenkins API Token)"
+echo "  Transport: Remote HTTP (Streamable HTTP at /mcp-server/mcp)"
+
+# Jenkins MCP runs natively inside Jenkins — no local dependencies to install
+# Requires: Jenkins 2.533+ with MCP Server plugin v0.158+
+log_info "Jenkins MCP server is a remote HTTP service — runs natively inside Jenkins"
+log_info "Prerequisites: Jenkins 2.533+ with MCP Server plugin v0.158+ installed"
+log_info "Generate JENKINS_AUTH_BASE64: echo -n 'username:api_token' | base64"
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 24d: Atlassian MCP Server
+# ═══════════════════════════════════════════
+
+log_step "24d/$TOTAL_STEPS Configuring Atlassian MCP Server..."
+echo "  Source: https://github.com/sooperset/mcp-atlassian"
+echo "  Auth: API Token (Cloud) or Personal Access Token (Server/DC)"
+echo "  Transport: stdio (via uvx mcp-atlassian)"
+
+# Atlassian MCP runs via uvx — requires uv installed
+if command -v uv &> /dev/null; then
+    log_info "uv found: $(uv --version 2>/dev/null || echo 'version unknown')"
+else
+    log_warn "uv not found — install via: curl -LsSf https://astral.sh/uv/install.sh | sh"
+fi
+
+log_info "Atlassian MCP server runs via 'uvx mcp-atlassian'"
+log_info "Supports both Jira and Confluence (Cloud + Server/DC)"
+log_info "Configure: JIRA_URL, JIRA_USERNAME, JIRA_API_TOKEN"
+log_info "Configure: CONFLUENCE_URL, CONFLUENCE_USERNAME, CONFLUENCE_API_TOKEN"
 
 echo ""
 
@@ -1210,10 +1269,165 @@ fi
 echo ""
 
 # ═══════════════════════════════════════════
-# Step 41: Protocol MCP Server (BGP + OSPF + GRE)
+# Step 41: nmap MCP Server (Network Scanning)
 # ═══════════════════════════════════════════
 
-log_step "41/$TOTAL_STEPS Installing Protocol MCP Server..."
+log_step "41/$TOTAL_STEPS Installing nmap MCP Server..."
+echo "  Source: https://github.com/sbmilburn/nmap-mcp"
+echo "  Network scanning — host discovery, port scanning, service/OS detection, vuln scanning (14 tools)"
+
+NMAP_MCP_DIR="$MCP_DIR/nmap-mcp"
+clone_or_pull "$NMAP_MCP_DIR" "https://github.com/sbmilburn/nmap-mcp.git"
+
+# Install Python dependencies
+pip3 install python-nmap pyyaml 2>/dev/null || pip install python-nmap pyyaml 2>/dev/null || true
+# fastmcp already installed by earlier steps
+
+# Install nmap binary if not present
+if command -v nmap &> /dev/null; then
+    log_info "nmap already installed: $(nmap --version 2>&1 | head -1)"
+else
+    log_info "Installing nmap..."
+    if command -v apt-get &> /dev/null; then
+        sudo apt-get install -y nmap 2>/dev/null || log_warn "Could not install nmap via apt-get"
+    elif command -v brew &> /dev/null; then
+        brew install nmap 2>/dev/null || log_warn "Could not install nmap via brew"
+    else
+        log_warn "nmap not found — install manually: https://nmap.org/download"
+    fi
+fi
+
+# Grant raw socket capability (Linux only — needed for SYN/OS/ARP scans)
+if [ "$(uname)" = "Linux" ] && command -v nmap &> /dev/null; then
+    if command -v setcap &> /dev/null; then
+        sudo setcap cap_net_raw+ep "$(which nmap)" 2>/dev/null && \
+            log_info "cap_net_raw set on nmap (SYN/OS/ARP scans enabled)" || \
+            log_warn "Could not set cap_net_raw on nmap — SYN/OS scans may require sudo"
+    fi
+fi
+
+# Add fd00::/8 (IPv6 ULA) to config if not already present
+if [ -f "$NMAP_MCP_DIR/config.yaml" ]; then
+    if ! grep -q "fd00::/8" "$NMAP_MCP_DIR/config.yaml" 2>/dev/null; then
+        sed -i '/172\.16\.0\.0\/12/a\  - "fd00::/8"           # IPv6 ULA — NetClaw overlay + lab networks' "$NMAP_MCP_DIR/config.yaml" 2>/dev/null || true
+    fi
+fi
+
+log_info "nmap MCP ready: $NMAP_MCP_DIR/server.py (14 tools, CIDR scope enforcement, audit logging)"
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 42: gtrace MCP Server (Path Analysis + IP Enrichment)
+# ═══════════════════════════════════════════
+
+log_step "42/$TOTAL_STEPS Installing gtrace MCP Server..."
+echo "  Source: https://github.com/hervehildenbrand/gtrace"
+echo "  Advanced traceroute (MPLS/ECMP/NAT), MTR, GlobalPing, ASN lookup, geolocation, rDNS (6 tools)"
+
+GTRACE_BIN=""
+
+# Option A: Try go install if Go 1.24+ is available
+if command -v go &> /dev/null; then
+    GO_VER=$(go version 2>/dev/null | grep -oP '\d+\.\d+' | head -1)
+    GO_MAJOR=$(echo "$GO_VER" | cut -d. -f1)
+    GO_MINOR=$(echo "$GO_VER" | cut -d. -f2)
+    if [ "$GO_MAJOR" -ge 1 ] && [ "$GO_MINOR" -ge 24 ] 2>/dev/null; then
+        log_info "Go $GO_VER found — attempting go install..."
+        if go install github.com/hervehildenbrand/gtrace/cmd/gtrace@latest 2>/dev/null; then
+            GOPATH_BIN="${GOPATH:-$HOME/go}/bin/gtrace"
+            if [ -f "$GOPATH_BIN" ]; then
+                sudo cp "$GOPATH_BIN" /usr/local/bin/gtrace 2>/dev/null || true
+                GTRACE_BIN="/usr/local/bin/gtrace"
+                log_info "gtrace installed via go install"
+            fi
+        fi
+    fi
+fi
+
+# Option B: Download prebuilt binary from GitHub releases
+if [ -z "$GTRACE_BIN" ] || ! command -v gtrace &> /dev/null; then
+    log_info "Downloading gtrace prebuilt binary..."
+    GTRACE_ARCH="amd64"
+    GTRACE_OS="linux"
+    if [ "$(uname)" = "Darwin" ]; then
+        GTRACE_OS="darwin"
+        if [ "$(uname -m)" = "arm64" ]; then
+            GTRACE_ARCH="arm64"
+        fi
+    elif [ "$(uname -m)" = "aarch64" ]; then
+        GTRACE_ARCH="arm64"
+    fi
+
+    # Get latest release tag
+    GTRACE_LATEST=$(curl -sL "https://api.github.com/repos/hervehildenbrand/gtrace/releases/latest" 2>/dev/null | grep -oP '"tag_name":\s*"\K[^"]+' || echo "v0.9.7")
+    GTRACE_VER="${GTRACE_LATEST#v}"
+    GTRACE_URL="https://github.com/hervehildenbrand/gtrace/releases/download/${GTRACE_LATEST}/gtrace_${GTRACE_VER}_${GTRACE_OS}_${GTRACE_ARCH}.tar.gz"
+
+    GTRACE_TMP=$(mktemp -d)
+    if curl -sL "$GTRACE_URL" -o "$GTRACE_TMP/gtrace.tar.gz" 2>/dev/null; then
+        tar xzf "$GTRACE_TMP/gtrace.tar.gz" -C "$GTRACE_TMP" 2>/dev/null
+        if [ -f "$GTRACE_TMP/gtrace" ]; then
+            sudo mv "$GTRACE_TMP/gtrace" /usr/local/bin/gtrace
+            sudo chmod +x /usr/local/bin/gtrace
+            GTRACE_BIN="/usr/local/bin/gtrace"
+            log_info "gtrace $GTRACE_VER installed from GitHub release ($GTRACE_OS/$GTRACE_ARCH)"
+        else
+            log_warn "Could not extract gtrace binary — install manually: https://github.com/hervehildenbrand/gtrace/releases"
+        fi
+    else
+        log_warn "Could not download gtrace — install manually: https://github.com/hervehildenbrand/gtrace/releases"
+    fi
+    rm -rf "$GTRACE_TMP"
+fi
+
+# Grant raw socket capability (Linux only — needed for traceroute/mtr)
+if [ "$(uname)" = "Linux" ] && command -v gtrace &> /dev/null; then
+    if command -v setcap &> /dev/null; then
+        sudo setcap cap_net_raw+ep "$(which gtrace)" 2>/dev/null && \
+            log_info "cap_net_raw set on gtrace (traceroute/mtr enabled)" || \
+            log_warn "Could not set cap_net_raw on gtrace — traceroute/mtr may require sudo"
+    fi
+fi
+
+if command -v gtrace &> /dev/null; then
+    log_info "gtrace MCP ready: $(gtrace --version 2>&1 | head -1) (6 tools: traceroute, mtr, globalping, asn_lookup, geo_lookup, reverse_dns)"
+else
+    log_warn "gtrace not installed — path analysis and IP enrichment skills will not work"
+fi
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 43: TTS MCP Server (Text-to-Speech via edge-tts)
+# ═══════════════════════════════════════════
+
+log_step "43/$TOTAL_STEPS Installing TTS MCP Server..."
+echo "  Source: edge-tts (Microsoft Edge Read Aloud)"
+echo "  Text-to-speech for Slack voice responses — text_to_speech, list_voices (2 tools)"
+
+TTS_MCP_DIR="$MCP_DIR/tts-mcp"
+mkdir -p "$TTS_MCP_DIR/output"
+
+# Install edge-tts and fastmcp
+pip3 install edge-tts fastmcp 2>/dev/null || pip install edge-tts fastmcp 2>/dev/null || true
+
+# Verify edge-tts is available
+if python3 -c "import edge_tts" 2>/dev/null; then
+    log_info "edge-tts installed OK"
+else
+    log_warn "edge-tts not installed — voice responses will not work"
+fi
+
+log_info "TTS MCP ready: $TTS_MCP_DIR/server.py (2 tools, no API key required)"
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 44: Protocol MCP Server (BGP + OSPF + GRE)
+# ═══════════════════════════════════════════
+
+log_step "44/$TOTAL_STEPS Installing Protocol MCP Server..."
 echo "  Source: WontYouBeMyNeighbour BGP/OSPFv3/GRE modules"
 echo "  Live control-plane participation — BGP peering, OSPF adjacency, GRE tunnels (10 tools)"
 
@@ -1241,10 +1455,10 @@ fi
 echo ""
 
 # ═══════════════════════════════════════════
-# Step 42: Protocol Peering Wizard (optional)
+# Step 45: Protocol Peering Wizard (optional)
 # ═══════════════════════════════════════════
 
-log_step "42/$TOTAL_STEPS Protocol Peering Configuration (optional)..."
+log_step "45/$TOTAL_STEPS Protocol Peering Configuration (optional)..."
 echo ""
 echo "  NetClaw can participate in BGP/OSPF as a real routing peer."
 echo "  This requires a GRE tunnel to a network device and protocol configuration."
@@ -1287,7 +1501,7 @@ if [[ "$ENABLE_PROTOCOL" =~ ^[Yy] ]]; then
         "PROTOCOL_MCP_SCRIPT=$PROTOCOL_MCP_DIR/server.py"; do
         key="${key_val%%=*}"
         if grep -q "^${key}=" "$OPENCLAW_ENV_PROTO" 2>/dev/null; then
-            sed -i "s|^${key}=.*|${key_val}|" "$OPENCLAW_ENV_PROTO"
+            sed -i.bak "s|^${key}=.*|${key_val}|" "$OPENCLAW_ENV_PROTO" && rm -f "$OPENCLAW_ENV_PROTO.bak"
         else
             echo "$key_val" >> "$OPENCLAW_ENV_PROTO"
         fi
@@ -1302,6 +1516,100 @@ if [[ "$ENABLE_PROTOCOL" =~ ^[Yy] ]]; then
     log_info "Tip: Start the FRR lab testbed for testing:"
     echo "      cd lab/frr-testbed && docker compose up -d"
     echo "      sudo bash scripts/setup-gre.sh"
+
+    # ─── NetClaw Mesh (BGP over ngrok) ───────────────────────────────
+    echo ""
+    echo "  ── NetClaw Mesh ──────────────────────────────────────────"
+    echo "  Peer your NetClaw with other NetClaw instances worldwide"
+    echo "  over BGP via ngrok TCP tunnels."
+    echo ""
+    read -rp "  Enable NetClaw Mesh peering (BGP over ngrok)? [y/N] " ENABLE_MESH
+    ENABLE_MESH="${ENABLE_MESH:-n}"
+
+    if [[ "$ENABLE_MESH" =~ ^[Yy] ]]; then
+        # BGP listen port (non-privileged)
+        read -rp "  BGP listen port (default 1179): " MESH_BGP_PORT
+        MESH_BGP_PORT="${MESH_BGP_PORT:-1179}"
+
+        # Build mesh peers JSON — start with local FRR peer from above
+        MESH_PEERS_JSON="[{\"ip\":\"$PROTO_PEER_IP\",\"as\":$PROTO_PEER_AS}"
+
+        # Ask for remote NetClaw peers
+        echo ""
+        echo "  Add remote NetClaw peers (other people's ngrok endpoints)."
+        echo "  You can also add peers later via: curl -X POST http://127.0.0.1:8179/add_peer"
+        echo ""
+        read -rp "  Add a remote NetClaw peer? [y/N] " ADD_REMOTE
+        ADD_REMOTE="${ADD_REMOTE:-n}"
+        MESH_REMOTE_COUNT=0
+        while [[ "$ADD_REMOTE" =~ ^[Yy] ]]; do
+            read -rp "    Remote ngrok hostname (e.g. 0.tcp.ngrok.io): " REMOTE_HOST
+            read -rp "    Remote ngrok port (e.g. 12345): " REMOTE_PORT
+            read -rp "    Remote AS number (e.g. 65002): " REMOTE_AS
+
+            # Add outbound mesh peer
+            MESH_PEERS_JSON="${MESH_PEERS_JSON},{\"ip\":\"${REMOTE_HOST}\",\"as\":${REMOTE_AS},\"port\":${REMOTE_PORT},\"hostname\":true}"
+            # Add matching inbound entry so they can connect back to us
+            MESH_PEERS_JSON="${MESH_PEERS_JSON},{\"as\":${REMOTE_AS},\"passive\":true,\"accept_any_source\":true}"
+            MESH_REMOTE_COUNT=$((MESH_REMOTE_COUNT + 1))
+
+            read -rp "    Add another remote peer? [y/N] " ADD_REMOTE
+            ADD_REMOTE="${ADD_REMOTE:-n}"
+        done
+
+        # Accept inbound connections from unknown peers?
+        echo ""
+        read -rp "  Accept inbound mesh connections from any AS? [Y/n] " ACCEPT_INBOUND
+        ACCEPT_INBOUND="${ACCEPT_INBOUND:-y}"
+        if [[ "$ACCEPT_INBOUND" =~ ^[Yy] ]]; then
+            # Add a general inbound acceptor — AS 0 means "match any unconfigured AS"
+            # For now, we rely on per-AS entries added above. This flag is for the env.
+            MESH_ACCEPT_ANY="true"
+        else
+            MESH_ACCEPT_ANY="false"
+        fi
+
+        # Close JSON array
+        MESH_PEERS_JSON="${MESH_PEERS_JSON}]"
+
+        # Write mesh env vars
+        for key_val in \
+            "BGP_LISTEN_PORT=$MESH_BGP_PORT" \
+            "NETCLAW_MESH_ENABLED=true" \
+            "NETCLAW_MESH_ACCEPT_INBOUND=$MESH_ACCEPT_ANY"; do
+            key="${key_val%%=*}"
+            if grep -q "^${key}=" "$OPENCLAW_ENV_PROTO" 2>/dev/null; then
+                sed -i.bak "s|^${key}=.*|${key_val}|" "$OPENCLAW_ENV_PROTO" && rm -f "$OPENCLAW_ENV_PROTO.bak"
+            else
+                echo "$key_val" >> "$OPENCLAW_ENV_PROTO"
+            fi
+        done
+
+        # Overwrite NETCLAW_BGP_PEERS with the combined local + mesh peers
+        if grep -q "^NETCLAW_BGP_PEERS=" "$OPENCLAW_ENV_PROTO" 2>/dev/null; then
+            sed -i.bak "s|^NETCLAW_BGP_PEERS=.*|NETCLAW_BGP_PEERS=$MESH_PEERS_JSON|" "$OPENCLAW_ENV_PROTO" && rm -f "$OPENCLAW_ENV_PROTO.bak"
+        else
+            echo "NETCLAW_BGP_PEERS=$MESH_PEERS_JSON" >> "$OPENCLAW_ENV_PROTO"
+        fi
+
+        echo ""
+        log_info "NetClaw Mesh configured:"
+        log_info "  BGP listen port: $MESH_BGP_PORT"
+        log_info "  Remote peers added: $MESH_REMOTE_COUNT"
+        log_info "  Accept inbound: $MESH_ACCEPT_ANY"
+        echo ""
+        log_info "To expose your BGP port via ngrok, run:"
+        echo "      ngrok tcp $MESH_BGP_PORT"
+        echo ""
+        log_info "Share your ngrok endpoint with other NetClaw operators."
+        log_info "They add it during their install, or at runtime:"
+        echo "      curl -X POST http://127.0.0.1:8179/add_peer \\"
+        echo "        -d '{\"ip\":\"YOUR.tcp.ngrok.io\",\"as\":$PROTO_LOCAL_AS,\"port\":NNNNN,\"hostname\":true}'"
+    else
+        log_info "NetClaw Mesh skipped (enable later by re-running install)"
+    fi
+    # ─── End NetClaw Mesh ────────────────────────────────────────────
+
 else
     log_info "Protocol participation skipped (enable later by re-running install)"
 fi
@@ -1309,10 +1617,567 @@ fi
 echo ""
 
 # ═══════════════════════════════════════════
-# Step 43: Deploy skills and set environment
+# Optional MCP Backends: Infoblox / Panorama / FortiManager
 # ═══════════════════════════════════════════
 
-log_step "43/$TOTAL_STEPS Deploying skills and configuration..."
+log_info "Installing optional enterprise platform MCP backends..."
+
+# Infoblox DDI MCP (PyPI)
+if pip3 install -q --upgrade infoblox-ddi-mcp 2>/dev/null; then
+    log_info "Infoblox DDI MCP installed via pip"
+else
+    log_warn "Infoblox DDI MCP install failed (pip3 install infoblox-ddi-mcp)"
+fi
+
+# Palo Alto Panorama MCP (PyPI)
+if pip3 install -q --upgrade iflow-mcp-cdot65-palo-alto-mcp 2>/dev/null; then
+    log_info "Palo Alto MCP installed via pip"
+else
+    log_warn "Palo Alto MCP install failed (pip3 install iflow-mcp-cdot65-palo-alto-mcp)"
+fi
+
+# FortiManager MCP (GitHub)
+FORTIMANAGER_MCP_DIR="$MCP_DIR/fortimanager-mcp"
+if [ -d "$FORTIMANAGER_MCP_DIR" ]; then
+    log_info "FortiManager MCP already cloned, pulling latest..."
+    git -C "$FORTIMANAGER_MCP_DIR" pull --quiet 2>/dev/null || true
+else
+    git clone https://github.com/jmpijll/fortimanager-mcp.git "$FORTIMANAGER_MCP_DIR" 2>/dev/null || true
+fi
+
+if [ -d "$FORTIMANAGER_MCP_DIR" ]; then
+    if command -v uv &> /dev/null; then
+        (cd "$FORTIMANAGER_MCP_DIR" && uv sync) 2>/dev/null || log_warn "FortiManager MCP uv sync failed"
+    fi
+    (cd "$FORTIMANAGER_MCP_DIR" && pip3 install -e .) 2>/dev/null || \
+        (cd "$FORTIMANAGER_MCP_DIR" && pip3 install --break-system-packages -e .) 2>/dev/null || \
+        log_warn "FortiManager MCP editable install failed"
+    log_info "FortiManager MCP prepared: $FORTIMANAGER_MCP_DIR"
+else
+    log_warn "FortiManager MCP clone failed"
+fi
+
+# Detect console script names where available
+INFOBLOX_MCP_CMD_DETECTED="infoblox-ddi-mcp"
+command -v infoblox-ddi-mcp &> /dev/null || INFOBLOX_MCP_CMD_DETECTED="python3 -m infoblox_ddi_mcp"
+
+PANOS_MCP_CMD_DETECTED="palo-alto-mcp"
+command -v palo-alto-mcp &> /dev/null || PANOS_MCP_CMD_DETECTED="python3 -m palo_alto_mcp"
+
+FORTIMANAGER_MCP_CMD_DETECTED="python3 -m fortimanager_mcp"
+
+# ═══════════════════════════════════════════
+# Step 45.5: Prisma SD-WAN MCP Server (Palo Alto Networks)
+# ═══════════════════════════════════════════
+
+log_step "45.5/$TOTAL_STEPS Installing Prisma SD-WAN MCP Server..."
+echo "  Source: https://github.com/iamdheerajdubey/prisma-sdwan-mcp"
+echo "  Palo Alto Networks Prisma SD-WAN read-only visibility: sites, elements, topology, status, alarms"
+echo "  15+ tools: get_sites, get_elements, get_topology, get_alarms, get_events, get_interfaces, etc."
+
+PRISMA_SDWAN_MCP_DIR="$MCP_DIR/prisma-sdwan-mcp"
+if [ -d "$PRISMA_SDWAN_MCP_DIR" ]; then
+    log_info "Prisma SD-WAN MCP already cloned, pulling latest..."
+    git -C "$PRISMA_SDWAN_MCP_DIR" pull --quiet 2>/dev/null || true
+else
+    git clone https://github.com/iamdheerajdubey/prisma-sdwan-mcp.git "$PRISMA_SDWAN_MCP_DIR" 2>/dev/null || true
+fi
+
+if [ -d "$PRISMA_SDWAN_MCP_DIR" ]; then
+    if command -v uv &> /dev/null; then
+        (cd "$PRISMA_SDWAN_MCP_DIR" && uv sync) 2>/dev/null || log_warn "Prisma SD-WAN MCP uv sync failed — trying pip"
+    fi
+    if [ -f "$PRISMA_SDWAN_MCP_DIR/pyproject.toml" ]; then
+        pip3 install -e "$PRISMA_SDWAN_MCP_DIR" 2>/dev/null || \
+            pip3 install --break-system-packages -e "$PRISMA_SDWAN_MCP_DIR" 2>/dev/null || \
+            log_warn "Prisma SD-WAN MCP editable install failed"
+    elif [ -f "$PRISMA_SDWAN_MCP_DIR/requirements.txt" ]; then
+        pip3 install -r "$PRISMA_SDWAN_MCP_DIR/requirements.txt" 2>/dev/null || \
+            pip3 install --break-system-packages -r "$PRISMA_SDWAN_MCP_DIR/requirements.txt" 2>/dev/null || \
+            log_warn "Prisma SD-WAN MCP requirements install failed"
+    fi
+    log_info "Prisma SD-WAN MCP prepared: $PRISMA_SDWAN_MCP_DIR"
+else
+    log_warn "Prisma SD-WAN MCP clone failed"
+fi
+
+# ═══════════════════════════════════════════
+# Step 45.6: Datadog MCP Server (Observability)
+# ═══════════════════════════════════════════
+
+log_step "45.6/$TOTAL_STEPS Configuring Datadog MCP Server..."
+echo "  Source: Remote MCP server at mcp://datadog.com/mcp"
+echo "  Full observability stack: logs, metrics, incidents, APM (16+ tools)"
+echo "  Toolsets: apm, error_tracking, feature_flags, dbm, security, llm_observability"
+log_info "Datadog MCP uses remote transport — no local installation required"
+log_info "Configure DD_API_KEY, DD_APP_KEY, and optionally DD_SITE in .env"
+
+# ═══════════════════════════════════════════
+# Step 45.7: PagerDuty MCP Server (Incident Management)
+# ═══════════════════════════════════════════
+
+log_step "45.7/$TOTAL_STEPS Configuring PagerDuty MCP Server..."
+echo "  Source: pip install pagerduty-mcp (uvx runner)"
+echo "  Incident management: incidents, on-call schedules, services, event orchestration (70 tools)"
+if command -v uvx &> /dev/null; then
+    log_info "uvx available for PagerDuty MCP (runs via uvx pagerduty-mcp)"
+else
+    log_warn "uvx not available — install uv for PagerDuty MCP: pip install uv"
+fi
+log_info "Configure PAGERDUTY_USER_API_KEY in .env"
+
+# ═══════════════════════════════════════════
+# Step 45.8: Splunk MCP Server (Log Analytics)
+# ═══════════════════════════════════════════
+
+log_step "45.8/$TOTAL_STEPS Configuring Splunk MCP Server..."
+echo "  Source: pip install splunk-mcp (uvx runner)"
+echo "  Log analytics: SPL search, indexes, saved searches, alerts (30 tools)"
+if command -v uvx &> /dev/null; then
+    log_info "uvx available for Splunk MCP (runs via uvx splunk-mcp)"
+else
+    log_warn "uvx not available — install uv for Splunk MCP: pip install uv"
+fi
+log_info "Configure SPLUNK_HOST and SPLUNK_TOKEN in .env"
+
+# ═══════════════════════════════════════════
+# Step 45.9: HashiCorp Terraform Cloud MCP Server (Infrastructure as Code)
+# ═══════════════════════════════════════════
+
+log_step "45.9/$TOTAL_STEPS Configuring Terraform Cloud MCP Server..."
+echo "  Source: Remote MCP server at mcp://terraform.io/mcp"
+echo "  IaC management: workspaces, runs, state, variables (40+ tools)"
+log_info "Terraform Cloud MCP uses remote transport — no local installation required"
+log_info "Configure TFC_TOKEN and TFC_ORG in .env"
+
+# ═══════════════════════════════════════════
+# Step 45.10: HashiCorp Vault MCP Server (Secrets Management)
+# ═══════════════════════════════════════════
+
+log_step "45.10/$TOTAL_STEPS Configuring Vault MCP Server..."
+echo "  Source: Remote MCP server at mcp://vault.hashicorp.com/mcp"
+echo "  Secrets management: KV, PKI, transit, auth methods (35+ tools)"
+log_info "Vault MCP uses remote transport — no local installation required"
+log_info "Configure VAULT_ADDR and VAULT_TOKEN in .env"
+
+# ═══════════════════════════════════════════
+# Step 45.11: Zscaler MCP Server (Zero Trust Security)
+# ═══════════════════════════════════════════
+
+log_step "45.11/$TOTAL_STEPS Configuring Zscaler MCP Server..."
+echo "  Source: Remote MCP server at mcp://zscaler.com/mcp"
+echo "  Zero Trust security: ZIA, ZPA, ZDX, identity, insights (300+ tools)"
+log_info "Zscaler MCP uses remote transport — no local installation required"
+log_info "Configure ZSCALER_ZIA_* and ZSCALER_ZPA_* in .env"
+
+# ═══════════════════════════════════════════
+# Step 45.12: Cloudflare MCP Servers (Edge Platform)
+# ═══════════════════════════════════════════
+
+log_step "45.12/$TOTAL_STEPS Configuring Cloudflare MCP Servers..."
+echo "  Source: 5 remote MCP servers at mcp://cloudflare.com/*"
+echo "  Edge platform: DNS analytics, security, Zero Trust, analytics, Workers"
+log_info "Cloudflare MCPs use remote transport — no local installation required"
+log_info "Configure CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in .env"
+
+# ═══════════════════════════════════════════
+# Step 45.13: Blender MCP Server (3D Visualization)
+# ═══════════════════════════════════════════
+
+log_step "45.13/$TOTAL_STEPS Configuring Blender MCP Server..."
+echo "  Source: https://github.com/ahujasid/blender-mcp"
+echo "  3D network topology visualization via Blender"
+echo "  Draw CDP/LLDP topologies, color by device type, export PNG/video"
+log_info "Blender MCP runs via uvx blender-mcp — no local clone required"
+log_info "Prerequisites:"
+log_info "  1. Install Blender on Windows: winget install BlenderFoundation.Blender"
+log_info "  2. Install addon: Download addon.py from GitHub, install via Edit > Preferences > Add-ons"
+log_info "  3. Connect addon: Press 'N' in Blender, find BlenderMCP tab, click 'Connect to Claude'"
+log_info "  4. Get Windows IP from WSL: cat /etc/resolv.conf | grep nameserver"
+log_info "  5. Set BLENDER_HOST and BLENDER_PORT in .env"
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 45.14: Aruba CX MCP Server (HPE Aruba Networking)
+# ═══════════════════════════════════════════
+
+log_step "45.14/$TOTAL_STEPS Installing Aruba CX MCP Server..."
+echo "  Source: https://github.com/slientnight/aruba-cx-mcp-server"
+echo "  Aruba CX switch management: 16 tools (11 read, 5 write)"
+echo "  Read: system info, interfaces, VLANs, configs, routes, LLDP, MAC table, DOM, ISSU, firmware, VSF"
+echo "  Write: interface config, VLAN management, save config, ISSU, firmware (ITSM-gated)"
+
+ARUBA_CX_MCP_DIR="$MCP_DIR/aruba-cx-mcp"
+if [ -d "$ARUBA_CX_MCP_DIR" ]; then
+    log_info "Aruba CX MCP already cloned, pulling latest..."
+    git -C "$ARUBA_CX_MCP_DIR" pull --quiet 2>/dev/null || true
+else
+    git clone https://github.com/slientnight/aruba-cx-mcp-server.git "$ARUBA_CX_MCP_DIR" 2>/dev/null || true
+fi
+
+if [ -d "$ARUBA_CX_MCP_DIR" ]; then
+    if command -v uv &> /dev/null; then
+        (cd "$ARUBA_CX_MCP_DIR" && uv sync) 2>/dev/null || log_warn "Aruba CX MCP uv sync failed — trying pip"
+    fi
+    if [ -f "$ARUBA_CX_MCP_DIR/pyproject.toml" ]; then
+        pip3 install -e "$ARUBA_CX_MCP_DIR" 2>/dev/null || \
+            pip3 install --break-system-packages -e "$ARUBA_CX_MCP_DIR" 2>/dev/null || \
+            log_warn "Aruba CX MCP editable install failed"
+    elif [ -f "$ARUBA_CX_MCP_DIR/requirements.txt" ]; then
+        pip3 install -r "$ARUBA_CX_MCP_DIR/requirements.txt" 2>/dev/null || \
+            pip3 install --break-system-packages -r "$ARUBA_CX_MCP_DIR/requirements.txt" 2>/dev/null || \
+            log_warn "Aruba CX MCP requirements install failed"
+    fi
+    log_info "Aruba CX MCP prepared: $ARUBA_CX_MCP_DIR"
+else
+    log_warn "Aruba CX MCP clone failed"
+fi
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 46: AAP Enterprise MCP Server (Ansible Automation Platform)
+# ═══════════════════════════════════════════
+
+log_step "46/$TOTAL_STEPS Installing AAP Enterprise MCP Server..."
+echo "  Source: https://github.com/sibilleb/AAP-Enterprise-MCP-Server"
+echo "  Red Hat Ansible Automation Platform, Event-Driven Ansible, ansible-lint, Red Hat docs"
+echo "  4 MCP servers: ansible.py (45 tools), eda.py (12 tools), ansible-lint.py (9 tools), redhat_docs.py"
+
+AAP_MCP_DIR="$MCP_DIR/AAP-Enterprise-MCP-Server"
+clone_or_pull "$AAP_MCP_DIR" "https://github.com/sibilleb/AAP-Enterprise-MCP-Server.git"
+
+if [ -d "$AAP_MCP_DIR" ]; then
+    log_info "Installing AAP MCP dependencies..."
+    if command -v uv &> /dev/null; then
+        (cd "$AAP_MCP_DIR" && uv sync) 2>/dev/null || log_warn "AAP MCP uv sync failed — trying pip"
+    fi
+    if [ -f "$AAP_MCP_DIR/pyproject.toml" ]; then
+        pip3 install -e "$AAP_MCP_DIR" 2>/dev/null || \
+            pip3 install --break-system-packages -e "$AAP_MCP_DIR" 2>/dev/null || \
+            log_warn "AAP MCP editable install failed — trying requirements"
+    fi
+    if [ -f "$AAP_MCP_DIR/requirements.txt" ]; then
+        pip3 install -r "$AAP_MCP_DIR/requirements.txt" 2>/dev/null || \
+            pip3 install --break-system-packages -r "$AAP_MCP_DIR/requirements.txt" 2>/dev/null || \
+            log_warn "AAP MCP requirements install failed"
+    fi
+
+    [ -f "$AAP_MCP_DIR/ansible.py" ] && \
+        log_info "AAP MCP ready: $AAP_MCP_DIR/ansible.py" || \
+        log_error "ansible.py not found in AAP MCP"
+else
+    log_warn "AAP MCP clone failed"
+fi
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 47: fwrule MCP Server (Firewall Rule Analyzer)
+# ═══════════════════════════════════════════
+
+log_step "47/$TOTAL_STEPS Installing fwrule MCP Server..."
+echo "  Source: https://github.com/AutomateIP/fwrule-mcp"
+echo "  Multi-vendor firewall rule overlap, shadowing, conflict, and duplication analysis"
+echo "  9 vendors: PAN-OS, ASA, FTD, IOS/IOS-XE, IOS-XR, Check Point, SRX, Junos, Nokia SR OS (3 tools)"
+
+FWRULE_MCP_DIR="$MCP_DIR/fwrule-mcp"
+clone_or_pull "$FWRULE_MCP_DIR" "https://github.com/AutomateIP/fwrule-mcp.git"
+
+if [ -d "$FWRULE_MCP_DIR" ]; then
+    log_info "Installing fwrule MCP dependencies..."
+    if command -v uv &> /dev/null; then
+        (cd "$FWRULE_MCP_DIR" && uv sync) 2>/dev/null || log_warn "fwrule MCP uv sync failed — trying pip"
+    fi
+    if [ -f "$FWRULE_MCP_DIR/pyproject.toml" ]; then
+        pip3 install -e "$FWRULE_MCP_DIR" 2>/dev/null || \
+            pip3 install --break-system-packages -e "$FWRULE_MCP_DIR" 2>/dev/null || \
+            log_warn "fwrule MCP editable install failed"
+    fi
+
+    log_info "fwrule MCP ready: $FWRULE_MCP_DIR (run via 'uv run fwrule-mcp')"
+else
+    log_warn "fwrule MCP clone failed"
+fi
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 48: SuzieQ MCP Server (Network Observability)
+# ═══════════════════════════════════════════
+
+log_step "48/$TOTAL_STEPS Installing SuzieQ MCP Server..."
+echo "  Built-in MCP server: mcp-servers/suzieq-mcp/"
+echo "  SuzieQ network observability — show, summarize, assert, unique, path (5 read-only tools)"
+
+SUZIEQ_MCP_DIR="$MCP_DIR/suzieq-mcp"
+if [ -d "$NETCLAW_DIR/mcp-servers/suzieq-mcp" ]; then
+    SUZIEQ_MCP_DIR="$NETCLAW_DIR/mcp-servers/suzieq-mcp"
+fi
+
+if [ -f "$SUZIEQ_MCP_DIR/requirements.txt" ]; then
+    log_info "Installing SuzieQ MCP dependencies..."
+    pip3 install -r "$SUZIEQ_MCP_DIR/requirements.txt" 2>/dev/null || \
+        pip3 install --break-system-packages -r "$SUZIEQ_MCP_DIR/requirements.txt" 2>/dev/null || {
+            log_warn "SuzieQ MCP pip install failed — dependencies may need manual installation"
+        }
+    log_info "SuzieQ MCP ready: $SUZIEQ_MCP_DIR"
+else
+    log_warn "SuzieQ MCP requirements.txt not found at $SUZIEQ_MCP_DIR"
+fi
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 49: Batfish MCP Server
+# ═══════════════════════════════════════════
+
+log_step "49/$TOTAL_STEPS Installing Batfish MCP Server..."
+echo "  Built-in MCP server: mcp-servers/batfish-mcp/"
+echo "  Batfish offline config analysis — upload, validate, reachability, ACL trace, diff, compliance (8 tools)"
+
+BATFISH_MCP_DIR="$MCP_DIR/batfish-mcp"
+if [ -d "$NETCLAW_DIR/mcp-servers/batfish-mcp" ]; then
+    BATFISH_MCP_DIR="$NETCLAW_DIR/mcp-servers/batfish-mcp"
+fi
+
+if [ -f "$BATFISH_MCP_DIR/requirements.txt" ]; then
+    log_info "Installing Batfish MCP dependencies..."
+    pip3 install -r "$BATFISH_MCP_DIR/requirements.txt" 2>/dev/null || \
+        pip3 install --break-system-packages -r "$BATFISH_MCP_DIR/requirements.txt" 2>/dev/null || {
+            log_warn "Batfish MCP pip install failed — dependencies may need manual installation"
+        }
+    log_info "Batfish MCP ready: $BATFISH_MCP_DIR"
+else
+    log_warn "Batfish MCP requirements.txt not found at $BATFISH_MCP_DIR"
+fi
+
+# Check if Batfish Docker image is available
+if command -v docker &> /dev/null; then
+    if docker image inspect batfish/batfish &> /dev/null 2>&1; then
+        log_info "Batfish Docker image already available"
+    else
+        log_info "Pulling Batfish Docker image (batfish/batfish)..."
+        docker pull batfish/batfish 2>/dev/null || \
+            log_warn "Could not pull batfish/batfish — pull manually: docker pull batfish/batfish"
+    fi
+else
+    log_warn "Docker not found — Batfish requires Docker. Install Docker and run: docker pull batfish/batfish"
+fi
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 50: Azure Network MCP Server
+# ═══════════════════════════════════════════
+
+log_step "50/$TOTAL_STEPS Installing Azure Network MCP Server..."
+echo "  Built-in MCP server: mcp-servers/azure-network-mcp/"
+echo "  Azure networking — VNets, NSGs, ExpressRoute, VPN, Firewall, LB, DNS (19 tools)"
+
+AZURE_NET_MCP_DIR="$MCP_DIR/azure-network-mcp"
+if [ -d "$NETCLAW_DIR/mcp-servers/azure-network-mcp" ]; then
+    AZURE_NET_MCP_DIR="$NETCLAW_DIR/mcp-servers/azure-network-mcp"
+fi
+
+if [ -f "$AZURE_NET_MCP_DIR/requirements.txt" ]; then
+    log_info "Installing Azure Network MCP dependencies..."
+    pip3 install -r "$AZURE_NET_MCP_DIR/requirements.txt" 2>/dev/null || \
+        pip3 install --break-system-packages -r "$AZURE_NET_MCP_DIR/requirements.txt" 2>/dev/null || {
+            log_warn "Azure Network MCP pip install failed — dependencies may need manual installation"
+        }
+
+    # Copy .env.example if .env does not exist
+    if [ -f "$AZURE_NET_MCP_DIR/.env.example" ] && [ ! -f "$AZURE_NET_MCP_DIR/.env" ]; then
+        log_info "Azure Network MCP .env.example available — copy and configure:"
+        echo "    cp $AZURE_NET_MCP_DIR/.env.example $AZURE_NET_MCP_DIR/.env"
+    fi
+
+    log_info "Azure Network MCP ready: $AZURE_NET_MCP_DIR"
+else
+    log_warn "Azure Network MCP requirements.txt not found at $AZURE_NET_MCP_DIR"
+fi
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 50b: gNMI Streaming Telemetry MCP Server
+# ═══════════════════════════════════════════
+
+log_step "50b/$TOTAL_STEPS Installing gNMI Streaming Telemetry MCP Server..."
+echo "  Built-in MCP server: mcp-servers/gnmi-mcp/"
+echo "  gNMI telemetry — Get, Set (ITSM-gated), Subscribe, Capabilities, YANG browsing (10 tools)"
+echo "  Vendors: Cisco IOS-XR, Juniper, Arista, Nokia SR OS via pygnmi/gRPC"
+
+GNMI_MCP_DIR="$MCP_DIR/gnmi-mcp"
+if [ -d "$NETCLAW_DIR/mcp-servers/gnmi-mcp" ]; then
+    GNMI_MCP_DIR="$NETCLAW_DIR/mcp-servers/gnmi-mcp"
+fi
+
+if [ -f "$GNMI_MCP_DIR/requirements.txt" ]; then
+    log_info "Installing gNMI MCP dependencies (grpcio, pygnmi, protobuf, cryptography)..."
+    pip3 install -r "$GNMI_MCP_DIR/requirements.txt" 2>/dev/null || \
+        pip3 install --break-system-packages -r "$GNMI_MCP_DIR/requirements.txt" 2>/dev/null || {
+            log_warn "gNMI MCP pip install failed — dependencies may need manual installation"
+            log_info "Try: pip3 install fastmcp grpcio pygnmi protobuf cryptography pydantic"
+        }
+    log_info "gNMI MCP ready: $GNMI_MCP_DIR/gnmi_mcp_server.py"
+else
+    log_warn "gNMI MCP requirements.txt not found at $GNMI_MCP_DIR"
+fi
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 51: Deploy skills and set environment
+# ═══════════════════════════════════════════
+
+# ═══════════════════════════════════════════
+# Step 50c: Install Token Optimization Library (netclaw_tokens)
+# ═══════════════════════════════════════════
+
+log_step "50c/$TOTAL_STEPS Installing Token Optimization Library (netclaw_tokens)..."
+
+TOKEN_LIB_DIR="$NETCLAW_DIR/src/netclaw_tokens"
+if [ -d "$TOKEN_LIB_DIR" ]; then
+    log_info "Installing netclaw_tokens dependencies..."
+    pip3 install -r "$TOKEN_LIB_DIR/requirements.txt" 2>/dev/null || \
+        pip3 install --break-system-packages -r "$TOKEN_LIB_DIR/requirements.txt" 2>/dev/null || {
+            log_warn "netclaw_tokens pip install failed — trying individual packages"
+            pip3 install anthropic toon-format 2>/dev/null || \
+                pip3 install --break-system-packages anthropic toon-format 2>/dev/null || \
+                    log_warn "Token optimization deps failed. Install manually: pip3 install anthropic toon-format"
+        }
+    log_info "netclaw_tokens library ready at $TOKEN_LIB_DIR"
+else
+    log_warn "Token optimization library not found at $TOKEN_LIB_DIR"
+fi
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 50d: MemPalace AI Memory MCP Server
+# ═══════════════════════════════════════════
+
+log_step "50d/$TOTAL_STEPS Installing MemPalace AI Memory MCP Server..."
+echo "  Source: https://github.com/milla-jovovich/mempalace"
+echo "  AI memory system — 19 MCP tools, fully local, no API keys (Python 3.9+)"
+
+MEMPALACE_MCP_DIR="$MCP_DIR/mempalace"
+clone_or_pull "$MEMPALACE_MCP_DIR" "https://github.com/milla-jovovich/mempalace.git"
+
+log_info "Installing MemPalace dependencies..."
+pip3 install -e "$MEMPALACE_MCP_DIR" 2>/dev/null || \
+    pip3 install --break-system-packages -e "$MEMPALACE_MCP_DIR" 2>/dev/null || \
+    log_warn "MemPalace install failed. Install manually: pip3 install mempalace"
+
+if python3 -c "import mempalace" 2>/dev/null; then
+    log_info "MemPalace MCP ready: python3 -u $MEMPALACE_MCP_DIR/mempalace/mcp_server.py"
+else
+    log_warn "MemPalace not importable after install"
+fi
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 50e: HumanRail MCP Server (Human-in-the-Loop Escalation)
+# ═══════════════════════════════════════════
+
+log_step "50e/$TOTAL_STEPS Installing HumanRail MCP Server..."
+echo "  Source: https://github.com/prime001/humanrail-mcp-server"
+echo "  Human-in-the-loop escalation — route agent decisions to human engineers (7 tools, streamable HTTP)"
+
+HUMANRAIL_MCP_DIR="$MCP_DIR/humanrail-mcp-server"
+clone_or_pull "$HUMANRAIL_MCP_DIR" "https://github.com/prime001/humanrail-mcp-server.git"
+
+log_info "Installing HumanRail MCP dependencies..."
+pip3 install "mcp[cli]>=1.0.0" httpx 2>/dev/null || \
+    pip3 install --break-system-packages "mcp[cli]>=1.0.0" httpx 2>/dev/null || \
+    log_warn "HumanRail MCP dependencies install failed"
+
+[ -f "$HUMANRAIL_MCP_DIR/server.py" ] && \
+    log_info "HumanRail MCP ready: $HUMANRAIL_MCP_DIR/server.py" || \
+    log_error "HumanRail MCP server.py not found"
+
+echo ""
+echo "  HumanRail routes AI agent decisions to human engineers — free while in beta."
+echo "  Get your API key at: https://humanrail.dev"
+echo "  Start the server: HUMANRAIL_API_KEY=<key> python3 $HUMANRAIL_MCP_DIR/server.py"
+echo "  Or use the hosted endpoint: HUMANRAIL_MCP_URL=https://humanrail.dev/mcp"
+echo ""
+
+echo ""
+
+# ═══════════════════════════════════════════
+# Step 50f: Check Point Security Integration (15 MCP Servers)
+# ═══════════════════════════════════════════
+
+log_step "50f/$TOTAL_STEPS Check Point Security Integration..."
+echo "  Source: https://github.com/CheckPointSW/mcp-servers"
+echo "  Enterprise security platform — policy, threat intel, gateway, SASE (15 MCP servers, ~40 tools)"
+
+read -r -p "Enable Check Point Security Integration? [y/N] " enable_checkpoint
+if [[ "$enable_checkpoint" =~ ^[Yy]$ ]]; then
+    CHECKPOINT_MCP_DIR="$MCP_DIR/checkpoint-mcp-servers"
+    clone_or_pull "$CHECKPOINT_MCP_DIR" "https://github.com/CheckPointSW/mcp-servers.git"
+
+    log_info "Building Check Point MCP servers..."
+    cd "$CHECKPOINT_MCP_DIR"
+    npm install 2>/dev/null || log_warn "npm install failed for Check Point MCPs"
+    echo "n" | npm run build 2>/dev/null || log_warn "npm run build failed for Check Point MCPs"
+    cd "$NETCLAW_DIR"
+
+    echo ""
+    echo "  Check Point MCP servers installed to: $CHECKPOINT_MCP_DIR"
+    echo ""
+    echo "  Configure credentials in ~/.openclaw/.env:"
+    echo "    # Management Server (policy, logs, threat prevention, gateway)"
+    echo "    CHKP_MGMT_HOST=192.168.1.100"
+    echo "    CHKP_MGMT_API_KEY=your-api-key-here"
+    echo ""
+    echo "    # Reputation Service (IP/URL/file threat intelligence)"
+    echo "    CHKP_REPUTATION_API_KEY=your-reputation-key"
+    echo ""
+    echo "    # Harmony SASE (cloud-delivered security)"
+    echo "    CHKP_SASE_API_KEY=your-sase-key"
+    echo ""
+    echo "  See docs/CHECKPOINT.md for full credential setup."
+    echo ""
+
+    read -r -p "Configure Check Point credentials now? [y/N] " config_checkpoint
+    if [[ "$config_checkpoint" =~ ^[Yy]$ ]]; then
+        echo ""
+        read -r -p "Check Point Management Server host (IP/hostname): " chkp_mgmt_host
+        read -r -p "Check Point Management API key: " chkp_mgmt_key
+        read -r -p "Check Point Reputation API key (or press Enter to skip): " chkp_reputation_key
+
+        if [ -n "$chkp_mgmt_host" ]; then
+            _set_env_var "CHKP_MGMT_HOST" "$chkp_mgmt_host"
+            log_info "Set CHKP_MGMT_HOST"
+        fi
+        if [ -n "$chkp_mgmt_key" ]; then
+            _set_env_var "CHKP_MGMT_API_KEY" "$chkp_mgmt_key"
+            log_info "Set CHKP_MGMT_API_KEY"
+        fi
+        if [ -n "$chkp_reputation_key" ]; then
+            _set_env_var "CHKP_REPUTATION_API_KEY" "$chkp_reputation_key"
+            log_info "Set CHKP_REPUTATION_API_KEY"
+        fi
+        _set_env_var "CHKP_TELEMETRY_DISABLED" "true"
+        log_info "Check Point credentials configured in ~/.openclaw/.env"
+    else
+        log_info "Skipping credential configuration. Set CHKP_* variables in ~/.openclaw/.env later."
+    fi
+
+    log_info "Check Point integration enabled. Use /checkpoint skill to query."
+else
+    log_info "Skipping Check Point integration. Run scripts/checkpoint-enable.sh later to enable."
+fi
+
+echo ""
+
+log_step "51/$TOTAL_STEPS Deploying skills and configuration..."
 
 PYATS_SCRIPT="$PYATS_MCP_DIR/pyats_mcp_server.py"
 TESTBED_PATH="$NETCLAW_DIR/testbed/testbed.yaml"
@@ -1361,34 +2226,54 @@ log_info "Symlinked testbed.yaml into workspace"
 OPENCLAW_ENV="$OPENCLAW_DIR/.env"
 [ -f "$OPENCLAW_ENV" ] || touch "$OPENCLAW_ENV"
 
-declare -A ENV_VARS=(
-    ["PYATS_TESTBED_PATH"]="$TESTBED_PATH"
-    ["PYATS_MCP_SCRIPT"]="$PYATS_SCRIPT"
-    ["MCP_CALL"]="$NETCLAW_DIR/scripts/mcp-call.py"
-    ["MARKMAP_MCP_SCRIPT"]="$MARKMAP_INNER/dist/index.js"
-    ["GAIT_MCP_SCRIPT"]="$NETCLAW_DIR/scripts/gait-stdio.py"
-    ["NETBOX_MCP_SCRIPT"]="$NETBOX_MCP_DIR/src/netbox_mcp_server/server.py"
-    ["SERVICENOW_MCP_SCRIPT"]="$SERVICENOW_MCP_DIR/src/servicenow_mcp/cli.py"
-    ["ACI_MCP_SCRIPT"]="$ACI_MCP_DIR/aci_mcp/main.py"
-    ["ISE_MCP_SCRIPT"]="$ISE_MCP_DIR/src/ise_mcp_server/server.py"
-    ["WIKIPEDIA_MCP_SCRIPT"]="$WIKIPEDIA_MCP_DIR/main.py"
-    ["NVD_MCP_SCRIPT"]="$NVD_MCP_DIR/mcp_nvd/main.py"
-    ["SUBNET_MCP_SCRIPT"]="$SUBNET_MCP_DIR/servers/subnetcalculator_mcp.py"
-    ["F5_MCP_SCRIPT"]="$F5_MCP_DIR/F5MCPserver.py"
-    ["CATC_MCP_SCRIPT"]="$CATC_MCP_DIR/catalyst-center-mcp.py"
-    ["PACKET_BUDDY_MCP_SCRIPT"]="$PACKET_BUDDY_MCP_DIR/server.py"
-    ["PROTOCOL_MCP_SCRIPT"]="$PROTOCOL_MCP_DIR/server.py"
-    ["CLAB_MCP_SCRIPT"]="$CLAB_MCP_DIR/clab_mcp_server.py"
-    ["SDWAN_MCP_SCRIPT"]="$SDWAN_MCP_DIR/sdwan_mcp_server.py"
-)
-
-for key in "${!ENV_VARS[@]}"; do
+# Write env vars to OpenClaw .env (portable — no associative arrays for macOS bash 3.2)
+_set_env_var() {
+    local key="$1" val="$2"
     if grep -q "^${key}=" "$OPENCLAW_ENV" 2>/dev/null; then
-        sed -i "s|^${key}=.*|${key}=${ENV_VARS[$key]}|" "$OPENCLAW_ENV"
+        sed -i.bak "s|^${key}=.*|${key}=${val}|" "$OPENCLAW_ENV" && rm -f "$OPENCLAW_ENV.bak"
     else
-        echo "${key}=${ENV_VARS[$key]}" >> "$OPENCLAW_ENV"
+        echo "${key}=${val}" >> "$OPENCLAW_ENV"
     fi
-done
+}
+
+_set_env_var "PYATS_TESTBED_PATH"       "$TESTBED_PATH"
+_set_env_var "PYATS_MCP_SCRIPT"         "$PYATS_SCRIPT"
+_set_env_var "MCP_CALL"                 "$NETCLAW_DIR/scripts/mcp-call.py"
+_set_env_var "MARKMAP_MCP_SCRIPT"       "$MARKMAP_INNER/dist/index.js"
+_set_env_var "GAIT_MCP_SCRIPT"          "$NETCLAW_DIR/scripts/gait-stdio.py"
+_set_env_var "NETBOX_MCP_SCRIPT"        "$NETBOX_MCP_DIR/src/netbox_mcp_server/server.py"
+_set_env_var "SERVICENOW_MCP_SCRIPT"    "$SERVICENOW_MCP_DIR/src/servicenow_mcp/cli.py"
+_set_env_var "ACI_MCP_SCRIPT"           "$ACI_MCP_DIR/aci_mcp/main.py"
+_set_env_var "ISE_MCP_SCRIPT"           "$ISE_MCP_DIR/src/ise_mcp_server/server.py"
+_set_env_var "WIKIPEDIA_MCP_SCRIPT"     "$WIKIPEDIA_MCP_DIR/main.py"
+_set_env_var "NVD_MCP_SCRIPT"           "$NVD_MCP_DIR/mcp_nvd/main.py"
+_set_env_var "SUBNET_MCP_SCRIPT"        "$SUBNET_MCP_DIR/servers/subnetcalculator_mcp.py"
+_set_env_var "F5_MCP_SCRIPT"            "$F5_MCP_DIR/F5MCPserver.py"
+_set_env_var "CATC_MCP_SCRIPT"          "$CATC_MCP_DIR/catalyst-center-mcp.py"
+_set_env_var "PACKET_BUDDY_MCP_SCRIPT"  "$PACKET_BUDDY_MCP_DIR/server.py"
+_set_env_var "NMAP_MCP_SCRIPT"          "$NMAP_MCP_DIR/server.py"
+_set_env_var "PROTOCOL_MCP_SCRIPT"      "$PROTOCOL_MCP_DIR/server.py"
+_set_env_var "CLAB_MCP_SCRIPT"          "$CLAB_MCP_DIR/clab_mcp_server.py"
+_set_env_var "SDWAN_MCP_SCRIPT"         "$SDWAN_MCP_DIR/sdwan_mcp_server.py"
+_set_env_var "INFOBLOX_MCP_CMD"         "$INFOBLOX_MCP_CMD_DETECTED"
+_set_env_var "PANOS_MCP_CMD"            "$PANOS_MCP_CMD_DETECTED"
+_set_env_var "FORTIMANAGER_MCP_CMD"     "$FORTIMANAGER_MCP_CMD_DETECTED"
+_set_env_var "MEMPALACE_MCP_SCRIPT"     "$MEMPALACE_MCP_DIR/mempalace/mcp_server.py"
+_set_env_var "HUMANRAIL_MCP_SCRIPT"    "$HUMANRAIL_MCP_DIR/server.py"
+_set_env_var "HUMANRAIL_MCP_URL"       "http://127.0.0.1:8100/mcp"
+
+# gtrace is a Go binary, not a Python script — just record the path
+if command -v gtrace &> /dev/null; then
+    _set_env_var "GTRACE_MCP_BIN"       "$(which gtrace)"
+fi
+
+_set_env_var "TTS_MCP_SCRIPT"            "$TTS_MCP_DIR/server.py"
+_set_env_var "FWRULE_MCP_DIR"             "$FWRULE_MCP_DIR"
+_set_env_var "AAP_MCP_DIR"               "$AAP_MCP_DIR"
+_set_env_var "AAP_MCP_ANSIBLE_SCRIPT"    "$AAP_MCP_DIR/ansible.py"
+_set_env_var "AAP_MCP_EDA_SCRIPT"        "$AAP_MCP_DIR/eda.py"
+_set_env_var "AAP_MCP_LINT_SCRIPT"       "$AAP_MCP_DIR/ansible-lint.py"
+_set_env_var "AAP_MCP_DOCS_SCRIPT"       "$AAP_MCP_DIR/redhat_docs.py"
 
 # Remind user about API key if not set
 if ! grep -q "^ANTHROPIC_API_KEY=" "$OPENCLAW_ENV" 2>/dev/null && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
@@ -1398,7 +2283,7 @@ if ! grep -q "^ANTHROPIC_API_KEY=" "$OPENCLAW_ENV" 2>/dev/null && [ -z "${ANTHRO
     log_warn "ANTHROPIC_API_KEY not set. Add it to $OPENCLAW_ENV or export it in your shell."
 fi
 
-log_info "Set ${#ENV_VARS[@]} environment variables in $OPENCLAW_ENV"
+log_info "Environment variables written to $OPENCLAW_ENV"
 
 # Verify the config is correct
 if [ -f "$OPENCLAW_DIR/openclaw.json" ]; then
@@ -1420,10 +2305,10 @@ fi
 echo ""
 
 # ═══════════════════════════════════════════
-# Step 44: Verify installation
+# Step 50: Verify installation
 # ═══════════════════════════════════════════
 
-log_step "44/$TOTAL_STEPS Verifying installation..."
+log_step "52/$TOTAL_STEPS Verifying installation..."
 
 SERVERS_OK=0
 SERVERS_FAIL=0
@@ -1548,6 +2433,33 @@ elif python3 -c "import cisco_nso_mcp_server" 2>/dev/null; then
     SERVERS_OK=$((SERVERS_OK + 1))
 else
     log_warn "NSO MCP: NOT INSTALLED (requires Python 3.12+, pip3 install cisco-nso-mcp-server)"
+fi
+
+if command -v infoblox-ddi-mcp &> /dev/null || python3 -c "import infoblox_ddi_mcp" 2>/dev/null; then
+    log_info "Infoblox DDI MCP: OK"
+    SERVERS_OK=$((SERVERS_OK + 1))
+else
+    log_warn "Infoblox DDI MCP: NOT INSTALLED (pip3 install infoblox-ddi-mcp)"
+fi
+
+if command -v palo-alto-mcp &> /dev/null || python3 -c "import palo_alto_mcp" 2>/dev/null; then
+    log_info "Palo Alto MCP: OK"
+    SERVERS_OK=$((SERVERS_OK + 1))
+else
+    log_warn "Palo Alto MCP: NOT INSTALLED (pip3 install iflow-mcp-cdot65-palo-alto-mcp)"
+fi
+
+if [ -d "$FORTIMANAGER_MCP_DIR" ]; then
+    if python3 -c "import fortimanager_mcp" 2>/dev/null; then
+        log_info "FortiManager MCP: OK"
+        SERVERS_OK=$((SERVERS_OK + 1))
+    else
+        log_info "FortiManager MCP: CLONED (module not importable in current env)"
+        SERVERS_OK=$((SERVERS_OK + 1))
+    fi
+else
+    log_warn "FortiManager MCP: NOT INSTALLED (git clone failed)"
+    SERVERS_FAIL=$((SERVERS_FAIL + 1))
 fi
 
 # AWS MCPs run via uvx — check if uvx is available
@@ -1690,6 +2602,42 @@ else
     SERVERS_FAIL=$((SERVERS_FAIL + 1))
 fi
 
+# HumanRail MCP is git-cloned from GitHub
+if [ -f "$HUMANRAIL_MCP_DIR/server.py" ]; then
+    log_info "HumanRail MCP: OK (7 tools, streamable HTTP :8100 — requires HUMANRAIL_API_KEY)"
+    SERVERS_OK=$((SERVERS_OK + 1))
+else
+    log_warn "HumanRail MCP: NOT INSTALLED (clone failed)"
+    SERVERS_FAIL=$((SERVERS_FAIL + 1))
+fi
+
+# nmap MCP is git-cloned
+if [ -d "$NMAP_MCP_DIR" ] && [ -f "$NMAP_MCP_DIR/server.py" ]; then
+    log_info "nmap MCP: OK (14 tools, stdio — CIDR scope enforcement)"
+    SERVERS_OK=$((SERVERS_OK + 1))
+else
+    log_warn "nmap MCP: NOT INSTALLED (git clone failed)"
+    SERVERS_FAIL=$((SERVERS_FAIL + 1))
+fi
+
+# gtrace is a standalone Go binary
+if command -v gtrace &> /dev/null; then
+    log_info "gtrace MCP: OK (6 tools, stdio — $(gtrace --version 2>&1 | head -1))"
+    SERVERS_OK=$((SERVERS_OK + 1))
+else
+    log_warn "gtrace MCP: NOT INSTALLED (install via GitHub release or go install)"
+    SERVERS_FAIL=$((SERVERS_FAIL + 1))
+fi
+
+# TTS MCP
+if [ -d "$TTS_MCP_DIR" ] && [ -f "$TTS_MCP_DIR/server.py" ]; then
+    log_info "TTS MCP: OK (2 tools, stdio — edge-tts voice synthesis)"
+    SERVERS_OK=$((SERVERS_OK + 1))
+else
+    log_warn "TTS MCP: NOT INSTALLED"
+    SERVERS_FAIL=$((SERVERS_FAIL + 1))
+fi
+
 # Protocol MCP is bundled with NetClaw
 if [ -d "$PROTOCOL_MCP_DIR" ] && [ -f "$PROTOCOL_MCP_DIR/server.py" ]; then
     log_info "Protocol MCP: OK (10 tools, stdio — BGP + OSPF + GRE)"
@@ -1706,10 +2654,10 @@ log_info "Verification: $SERVERS_OK OK, $SERVERS_FAIL FAILED"
 echo ""
 
 # ═══════════════════════════════════════════
-# Step 45: Summary
+# Step 51: Summary
 # ═══════════════════════════════════════════
 
-log_step "45/$TOTAL_STEPS Installation Summary"
+log_step "53/$TOTAL_STEPS Installation Summary"
 echo ""
 echo "========================================="
 echo "  NetClaw Installation Complete"
@@ -1718,7 +2666,7 @@ echo ""
 
 SKILL_COUNT=$(ls -d "$NETCLAW_DIR/workspace/skills/"*/ 2>/dev/null | wc -l)
 
-echo "MCP Servers Installed (37):"
+echo "MCP Integrations Available (43):"
 echo "  ┌─────────────────────────────────────────────────────────────"
 echo "  │ NETWORK DEVICE AUTOMATION:"
 echo "  │   pyATS              Cisco device CLI, Genie parsers"
@@ -1736,6 +2684,7 @@ echo "  │"
 echo "  │ INFRASTRUCTURE PLATFORMS:"
 echo "  │   Cisco ACI           APIC / ACI fabric management"
 echo "  │   Cisco ISE           Identity, posture, TrustSec"
+echo "  │   Infoblox DDI        DNS, DHCP, IPAM records, scopes, utilization"
 echo "  │   NetBox              DCIM/IPAM source of truth (read-write)"
 echo "  │   Nautobot            IPAM/DCIM source of truth — IP addresses, prefixes, VRF/tenant (5 tools)"
 echo "  │   Infrahub            Schema-driven SoT — nodes, GraphQL, versioned branches (10 tools)"
@@ -1747,6 +2696,8 @@ echo "  │   Itential IAP        Config mgmt, compliance, workflows, golden con
 echo "  │"
 echo "  │ FIREWALL SECURITY:"
 echo "  │   Cisco FMC           Secure Firewall policy search, FTD targeting, multi-FMC"
+echo "  │   Palo Alto Panorama  Device groups, templates, policy search, commit validation"
+echo "  │   FortiManager        ADOM inventory, policy packages, install preview"
 echo "  │   Cisco Meraki        Dashboard API (~804 endpoints): orgs, networks, wireless, switching, security"
 echo "  │"
 echo "  │ NETWORK INTELLIGENCE:"
@@ -1770,6 +2721,13 @@ echo "  │   Microsoft Graph     OneDrive, SharePoint, Visio, Teams, Exchange"
 echo "  │"
 echo "  │ SECURITY & COMPLIANCE:"
 echo "  │   NVD CVE             NIST vulnerability database (Python)"
+echo "  │   nmap                Host discovery, port/service/OS scanning, vuln assessment (14 tools)"
+echo "  │"
+echo "  │ PATH ANALYSIS & IP ENRICHMENT:"
+echo "  │   gtrace              Traceroute (MPLS/ECMP/NAT), MTR, GlobalPing, ASN, geo, rDNS (6 tools)"
+echo "  │"
+echo "  │ VOICE SYNTHESIS:"
+echo "  │   TTS (edge-tts)      Text-to-speech for Slack voice responses — 300+ voices, MP3 output (2 tools)"
 echo "  │"
 echo "  │ VERSION CONTROL:"
 echo "  │   GitHub              Issues, PRs, code search, Actions (Docker)"
@@ -1791,12 +2749,18 @@ echo "  │   Cloud Monitoring      Metrics, alerts, time series (6 tools)"
 echo "  │   Cloud Logging         Log search, VPC flow logs, audit logs (6 tools)"
 echo "  │   Resource Manager      Project discovery (1 tool)"
 echo "  │"
+echo "  │ AZURE CLOUD (1 server via pip):"
+echo "  │   Azure Network         VNets, NSGs, ExpressRoute, VPN, Firewall, LB, DNS (19 tools)"
+echo "  │"
 echo "  │ UTILITIES:"
 echo "  │   Subnet Calculator   IPv4 + IPv6 CIDR calculator"
 echo "  │   GAIT                Git-based AI audit trail"
 echo "  │   Wikipedia           Technology context & history"
 echo "  │   Markmap             Mind map visualization"
 echo "  │   UML MCP            27+ diagram types via Kroki (class, sequence, nwdiag, rack, packet, C4)"
+echo "  │"
+echo "  │ HUMAN-IN-THE-LOOP:"
+echo "  │   HumanRail           Route decisions to human engineers — approvals, triage, low-confidence gates (7 tools, streamable HTTP)"
 echo "  │"
 echo "  │ NPX (no install):"
 echo "  │   Draw.io             Network topology diagrams"
@@ -1853,6 +2817,7 @@ echo "  │   ise-posture-audit      ISE posture & TrustSec audit"
 echo "  │   ise-incident-response  Endpoint investigation & quarantine"
 echo "  │   servicenow-change-workflow  Full ITSM change lifecycle"
 echo "  │   gait-session-tracking  Mandatory audit trail"
+echo "  │   humanrail-escalation  Human-in-the-loop gates — low-confidence decisions, pre-destructive approvals, incident triage"
 echo "  │"
 echo "  │ Itential IAP Skills:"
 echo "  │   itential-automation    Config mgmt, compliance, workflows, golden config, lifecycle (65+ tools)"
@@ -1862,6 +2827,16 @@ echo "  │   junos-network          PyEZ/NETCONF — CLI, config mgmt, Jinja2 t
 echo "  │"
 echo "  │ Arista CloudVision Skills:"
 echo "  │   arista-cvp              CVP — device inventory, events, connectivity monitor, tags (4 tools)"
+echo "  │"
+echo "  │ Ansible Automation Platform Skills:"
+echo "  │   aap-automation         AAP inventories, job templates, projects, ad-hoc commands (45 tools)"
+echo "  │   aap-eda                Event-Driven Ansible activations, rulebooks, event streams (12 tools)"
+echo "  │   aap-lint               ansible-lint playbook/role validation, best practices (9 tools)"
+echo "  │"
+echo "  │ Enterprise Platform Skills:"
+echo "  │   infoblox-ddi           DNS, DHCP, IPAM operations and validation"
+echo "  │   paloalto-panorama      Panorama policy search, object review, commit validation"
+echo "  │   fortimanager-ops       FortiManager ADOM and package governance"
 echo "  │"
 echo "  │ Microsoft 365 Skills:"
 echo "  │   msgraph-files          OneDrive/SharePoint file operations"
@@ -1873,6 +2848,15 @@ echo "  │   github-ops              Issues, PRs, config-as-code workflows"
 echo "  │"
 echo "  │ Packet Analysis Skills:"
 echo "  │   packet-analysis         pcap analysis + Slack upload support"
+echo "  │"
+echo "  │ nmap Network Scanning Skills:"
+echo "  │   nmap-network-scan       Host discovery, SYN/TCP/UDP port scanning (6 tools)"
+echo "  │   nmap-service-detection  Service/OS fingerprinting, vuln scanning (5 tools)"
+echo "  │   nmap-scan-management   Custom scans, scan history, result retrieval (3 tools)"
+echo "  │"
+echo "  │ gtrace Path Analysis & IP Enrichment Skills:"
+echo "  │   gtrace-path-analysis   Traceroute (MPLS/ECMP/NAT), MTR monitoring, GlobalPing (3 tools)"
+echo "  │   gtrace-ip-enrichment   ASN lookup, geolocation, reverse DNS (3 tools)"
 echo "  │"
 echo "  │ AWS Cloud Skills:"
 echo "  │   aws-network-ops        VPC, TGW, Cloud WAN, VPN, Firewall, flow logs"
@@ -1893,8 +2877,14 @@ echo "  │"
 echo "  │ Cisco FMC Skills:"
 echo "  │   fmc-firewall-ops        Access policy search, FTD targeting, multi-FMC audit"
 echo "  │"
+echo "  │ Firewall Rule Analysis Skills:"
+echo "  │   fwrule-analyzer         Multi-vendor rule overlap, shadowing, conflict, duplication detection (3 tools)"
+echo "  │"
 echo "  │ Cisco RADKit Skills:"
 echo "  │   radkit-remote-access    Cloud-relayed CLI, SNMP, device inventory, attributes"
+echo "  │"
+echo "  │ Data Center Fabric Skills:"
+echo "  │   evpn-vxlan-fabric      EVPN/VXLAN audit and troubleshooting workflows"
 echo "  │"
 echo "  │ Cisco Meraki Skills:"
 echo "  │   meraki-network-ops       Org inventory, networks, devices, clients, action batches"
@@ -1946,7 +2936,224 @@ echo "  │   slack-network-alerts   Alert formatting & delivery"
 echo "  │   slack-report-delivery  Report formatting for Slack"
 echo "  │   slack-incident-workflow Incident response in Slack"
 echo "  │   slack-user-context     User-aware interactions"
+echo "  │"
+echo "  │ WebEx Integration Skills:"
+echo "  │   webex-network-alerts   Adaptive Card alert delivery to WebEx spaces"
+echo "  │   webex-report-delivery  Report formatting for WebEx (Adaptive Cards + markdown)"
+echo "  │   webex-incident-workflow Incident response in WebEx with interactive buttons"
+echo "  │   webex-user-context     User-aware routing via WebEx People API"
+echo "  │"
+echo "  │ Voice Interface Skills:"
+echo "  │   slack-voice-interface  Slack voice clip → transcribe → NetClaw → edge-tts → voice reply"
+echo "  │   webex-voice-interface  WebEx voice clip → transcribe → NetClaw → edge-tts → voice reply"
+echo "  │"
+echo "  │ WebEx Bidirectional Channel (@jimiford/webex plugin):"
+echo "  │   Inbound:  Users @mention NetClaw in WebEx → webhook → OpenClaw → response"
+echo "  │   Outbound: NetClaw sends Adaptive Cards, alerts, reports to WebEx spaces"
+echo "  │   Cross-provider: WebEx↔Slack messaging enabled via crossContext config"
+echo "  │   Requires: WEBEX_BOT_TOKEN, ngrok (dev) or public HTTPS (prod)"
 echo "  └─────────────────────────────────────────────────────────────"
+echo ""
+
+# ═══════════════════════════════════════════
+# DefenseClaw Security Layer (Opt-In)
+# ═══════════════════════════════════════════
+
+echo ""
+echo -e "${CYAN}Enterprise Security (DefenseClaw + OpenShell)${NC}"
+echo "  DefenseClaw from Cisco AI Defense + NVIDIA OpenShell provides comprehensive protection:"
+echo "  - OpenShell container sandbox (Docker-based isolation with YAML policies)"
+echo "  - DefenseClaw component scanning (skills, MCPs, plugins)"
+echo "  - CodeGuard static analysis (credentials, eval, shell, SQL injection)"
+echo "  - Runtime guardrails (LLM inspection, tool call inspection)"
+echo "  - Audit logging with SIEM integration (Splunk HEC, OTLP)"
+echo ""
+echo "  Full stack: OpenShell (container isolation) + DefenseClaw (runtime security)"
+echo ""
+
+read -rp "Enable DefenseClaw + OpenShell (recommended)? [y/N] " ENABLE_DEFENSECLAW
+ENABLE_DEFENSECLAW="${ENABLE_DEFENSECLAW:-n}"
+
+if [[ "$ENABLE_DEFENSECLAW" =~ ^[Yy] ]]; then
+    log_step "Installing DefenseClaw security layer..."
+
+    # Check prerequisites
+    PREREQ_FAIL=0
+
+    # Check Docker
+    if ! command -v docker &> /dev/null; then
+        log_error "Docker is required for DefenseClaw."
+        log_error "Install Docker: https://docs.docker.com/get-docker/"
+        PREREQ_FAIL=1
+    elif ! docker info &> /dev/null 2>&1; then
+        log_error "Docker daemon is not running."
+        PREREQ_FAIL=1
+    else
+        log_info "Docker found and running."
+    fi
+
+    # Check Python 3.10+
+    if command -v python3 &> /dev/null; then
+        PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+        PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
+        PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
+        if [ "$PYTHON_MAJOR" -ge 3 ] && [ "$PYTHON_MINOR" -ge 10 ]; then
+            log_info "Python $PYTHON_VERSION found."
+        else
+            log_error "Python 3.10+ required. Found: $PYTHON_VERSION"
+            PREREQ_FAIL=1
+        fi
+    else
+        log_error "Python 3 is required."
+        PREREQ_FAIL=1
+    fi
+
+    # Check Go 1.25+
+    if command -v go &> /dev/null; then
+        GO_VERSION=$(go version | grep -oE 'go[0-9]+\.[0-9]+' | sed 's/go//')
+        GO_MAJOR=$(echo "$GO_VERSION" | cut -d. -f1)
+        GO_MINOR=$(echo "$GO_VERSION" | cut -d. -f2)
+        if [ "$GO_MAJOR" -ge 1 ] && [ "$GO_MINOR" -ge 25 ]; then
+            log_info "Go $GO_VERSION found."
+        else
+            log_warn "Go 1.25+ recommended. Found: $GO_VERSION"
+        fi
+    else
+        log_warn "Go not found. DefenseClaw gateway may not build."
+    fi
+
+    # Check Node.js 20+
+    if command -v node &> /dev/null; then
+        NODE_VER=$(node --version | sed 's/v//' | cut -d. -f1)
+        if [ "$NODE_VER" -ge 20 ]; then
+            log_info "Node.js v$NODE_VER found."
+        else
+            log_warn "Node.js 20+ recommended. Found: v$NODE_VER"
+        fi
+    else
+        log_warn "Node.js not found. DefenseClaw plugin may not build."
+    fi
+
+    if [ "$PREREQ_FAIL" -eq 1 ]; then
+        log_error "Prerequisites not met. Skipping DefenseClaw setup."
+        log_warn "Fix prerequisites and run: ./scripts/defenseclaw-enable.sh"
+    else
+        # Install DefenseClaw
+        log_info "Installing DefenseClaw..."
+        if curl -LsSf https://raw.githubusercontent.com/cisco-ai-defense/defenseclaw/main/scripts/install.sh | bash; then
+            log_info "DefenseClaw installed successfully."
+
+            # Initialize with guardrails
+            log_info "Initializing guardrails (observe mode)..."
+            if command -v defenseclaw &> /dev/null; then
+                defenseclaw init --enable-guardrail 2>/dev/null || log_warn "Guardrail init failed - run manually: defenseclaw init --enable-guardrail"
+            else
+                log_warn "defenseclaw CLI not in PATH. Add ~/.local/bin to PATH and run: defenseclaw init --enable-guardrail"
+            fi
+
+            # Update openclaw.json with security.mode = defenseclaw
+            OPENCLAW_CONFIG="$HOME/.openclaw/config/openclaw.json"
+            if [ -f "$OPENCLAW_CONFIG" ]; then
+                python3 -c "
+import json
+import os
+config_path = os.path.expanduser('$OPENCLAW_CONFIG')
+try:
+    with open(config_path) as f:
+        config = json.load(f)
+except:
+    config = {}
+if 'security' not in config:
+    config['security'] = {}
+config['security']['mode'] = 'defenseclaw'
+# Remove old netshell config if present
+config.pop('netshell', None)
+with open(config_path, 'w') as f:
+    json.dump(config, f, indent=2)
+print('DefenseClaw enabled in openclaw.json')
+" 2>/dev/null || log_warn "Could not update openclaw.json"
+            fi
+
+            # Install NVIDIA OpenShell
+            log_info "Installing NVIDIA OpenShell sandbox..."
+            if curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh; then
+                log_info "OpenShell installed successfully."
+
+                # Verify OpenShell
+                if command -v openshell &> /dev/null; then
+                    OPENSHELL_VERSION=$(openshell --version 2>/dev/null || echo "unknown")
+                    log_info "OpenShell version: $OPENSHELL_VERSION"
+
+                    # Start OpenShell gateway (Docker-based)
+                    log_info "Initializing OpenShell gateway..."
+                    openshell gateway start 2>/dev/null || log_warn "OpenShell gateway start failed - start manually: openshell gateway start"
+                else
+                    log_warn "openshell CLI not in PATH. Add ~/.local/bin to PATH"
+                fi
+            else
+                log_warn "OpenShell installation failed. Install manually:"
+                log_warn "  curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh"
+            fi
+
+            log_info "DefenseClaw + OpenShell enabled. NetClaw will run with enterprise security."
+            echo ""
+            echo "  ┌─────────────────────────────────────────────────────────────┐"
+            echo "  │  ENTERPRISE SECURITY STACK                                   │"
+            echo "  ├─────────────────────────────────────────────────────────────┤"
+            echo "  │  OpenShell:    ~/.local/bin/openshell                       │"
+            echo "  │  DefenseClaw:  ~/.defenseclaw/                              │"
+            echo "  │  Audit DB:     ~/.defenseclaw/audit.db                      │"
+            echo "  └─────────────────────────────────────────────────────────────┘"
+            echo ""
+            echo "  Key commands:"
+            echo "    openshell --version                    # Check OpenShell"
+            echo "    openshell gateway status               # Gateway status"
+            echo "    openshell sandbox create netclaw       # Create sandbox"
+            echo "    defenseclaw --version                  # Check DefenseClaw"
+            echo "    defenseclaw skill scan <name>          # Scan a skill"
+            echo "    defenseclaw setup guardrail --mode action  # Enable blocking"
+            echo ""
+            echo "  Run NetClaw in sandbox:"
+            echo "    openshell sandbox create netclaw"
+            echo "    openshell run netclaw -- claw"
+            echo ""
+            echo "  Full guide: docs/DEFENSECLAW.md"
+            echo "  Disable:    ./scripts/defenseclaw-disable.sh"
+        else
+            log_error "DefenseClaw installation failed."
+            log_warn "Try manual install: curl -LsSf https://raw.githubusercontent.com/cisco-ai-defense/defenseclaw/main/scripts/install.sh | bash"
+        fi
+    fi
+else
+    log_info "Skipping DefenseClaw setup."
+    log_info "NetClaw will run in hobby mode (no security layer)."
+
+    # Update openclaw.json with security.mode = hobby
+    OPENCLAW_CONFIG="$HOME/.openclaw/config/openclaw.json"
+    if [ -f "$OPENCLAW_CONFIG" ]; then
+        python3 -c "
+import json
+import os
+config_path = os.path.expanduser('$OPENCLAW_CONFIG')
+try:
+    with open(config_path) as f:
+        config = json.load(f)
+except:
+    config = {}
+if 'security' not in config:
+    config['security'] = {}
+config['security']['mode'] = 'hobby'
+# Remove old netshell config if present
+config.pop('netshell', None)
+with open(config_path, 'w') as f:
+    json.dump(config, f, indent=2)
+" 2>/dev/null || true
+    fi
+
+    echo ""
+    echo "  Enable later: ./scripts/defenseclaw-enable.sh"
+fi
+
 echo ""
 
 # ═══════════════════════════════════════════
